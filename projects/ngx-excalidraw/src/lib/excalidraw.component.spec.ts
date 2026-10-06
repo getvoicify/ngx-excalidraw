@@ -349,18 +349,28 @@ describe('ExcalidrawComponent', () => {
     expect(fixture.componentInstance.scene()).toBe(latest);
   });
 
-  it('keeps the scene from before the component was destroyed', async () => {
+  it('drops the scene once a crashed editor has been torn down', async () => {
     configure();
     const fixture = await mount();
-    const before = { version: 1 } as unknown as ExcalidrawSceneChange;
-    fake.created[0].callbacks.onSceneChange(before);
+    const [{ callbacks }] = fake.created;
+    callbacks.onSceneChange({ version: 1 } as unknown as ExcalidrawSceneChange);
+
+    callbacks.onError(new Error('Excalidraw crashed'));
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.scene()).toBeUndefined();
+  });
+
+  it('takes no scene the renderer reports after the component is destroyed', async () => {
+    configure();
+    const fixture = await mount();
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     onTestFinished(() => warn.mockRestore());
     fixture.destroy();
 
     fake.created[0].callbacks.onSceneChange({ version: 2 } as unknown as ExcalidrawSceneChange);
 
-    expect(fixture.componentInstance.scene()).toBe(before);
+    expect(fixture.componentInstance.scene()).toBeUndefined();
   });
 
   it('delivers the last scene change the renderer flushes while being destroyed', async () => {

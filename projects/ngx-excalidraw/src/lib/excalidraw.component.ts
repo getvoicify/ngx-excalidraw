@@ -185,6 +185,7 @@ export class ExcalidrawComponent implements OnDestroy {
           destroyRenderer();
           this.editor.set(null);
           this.editorApi.set(null);
+          this.latestScene.set(undefined);
           this.dom.removeChild(this.host, mounted.element);
         });
       } catch (error) {
