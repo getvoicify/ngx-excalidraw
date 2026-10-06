@@ -151,16 +151,6 @@ describe('ExcalidrawComponent', () => {
     expect(emitted).toEqual([api]);
   });
 
-  it('emits the imperative API once Excalidraw hands it over', async () => {
-    configure();
-    const fixture = await mount();
-    const emitted: ExcalidrawImperativeAPI[] = [];
-    fixture.componentInstance.api.subscribe((api) => emitted.push(api));
-    const api = { getSceneElements: () => [] } as unknown as ExcalidrawImperativeAPI;
-    fake.created[0].callbacks.onApi(api);
-    expect(emitted).toEqual([api]);
-  });
-
   it('never creates the renderer when destroyed before the bundle finishes loading', async () => {
     const pending = deferred<ExcalidrawRendererFactory>();
     loader.mockReturnValue(pending.promise);
