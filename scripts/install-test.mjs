@@ -113,6 +113,19 @@ function assertPackage(packageDir) {
 
   check('ships README.md', files.includes('README.md'), files.join(', '));
 
+  check('license is MIT', manifest.license === 'MIT', `got ${JSON.stringify(manifest.license)}`);
+  check(
+    'ships an MIT LICENSE',
+    files.includes('LICENSE') &&
+      readFileSync(join(packageDir, 'LICENSE'), 'utf8').startsWith('MIT License'),
+    files.join(', '),
+  );
+  check(
+    'repository points at getvoicify/ngx-excalidraw',
+    /github\.com\/getvoicify\/ngx-excalidraw(\.git)?$/.test(manifest.repository?.url ?? ''),
+    `got ${JSON.stringify(manifest.repository)}`,
+  );
+
   const specFiles = files.filter((file) => /\.spec\b|zone-setup/.test(file));
   check('no spec files in the tarball', specFiles.length === 0, specFiles.join(', '));
   const mapsWithTests = files
