@@ -3,10 +3,14 @@ import {
   PendingTasks,
   PLATFORM_ID,
   provideZonelessChangeDetection,
+  signal,
   Type,
 } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import type { ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types';
+import type {
+  ExcalidrawImperativeAPI,
+  ExcalidrawInitialDataState,
+} from '@excalidraw/excalidraw/types';
 import { ExcalidrawComponent } from './excalidraw.component';
 import { provideExcalidraw } from './provide-excalidraw';
 import { EXCALIDRAW_RENDERER_LOADER } from './renderer-loader';
@@ -60,6 +64,26 @@ class ProjectedPlaceholderHost {}
   template: `<ngx-excalidraw /><ngx-excalidraw />`,
 })
 class TwoInstancesHost {}
+
+@Component({
+  imports: [ExcalidrawComponent],
+  template: `<ngx-excalidraw
+    [theme]="theme()"
+    [viewModeEnabled]="viewMode()"
+    [initialData]="initialData()"
+  />`,
+})
+class BoundInputsHost {
+  readonly theme = signal<'light' | 'dark'>('light');
+  readonly viewMode = signal(false);
+  readonly initialData = signal<ExcalidrawInitialDataState | null>({ elements: [] });
+}
+
+@Component({
+  imports: [ExcalidrawComponent],
+  template: `<ngx-excalidraw viewModeEnabled="" zenModeEnabled="false" gridModeEnabled />`,
+})
+class AttributeBooleansHost {}
 
 describe('ExcalidrawComponent', () => {
   let loader: ReturnType<typeof vi.fn>;
@@ -320,5 +344,63 @@ describe('ExcalidrawComponent', () => {
     expect(
       (fixture.nativeElement as HTMLElement).querySelector('.ngx-excalidraw-placeholder'),
     ).not.toBeNull();
+  });
+
+  describe('Excalidraw props', () => {
+    const renderCalls = () => vi.mocked(fake.created[0].renderer.render).mock.calls;
+
+    it('renders with no props when no input is set, leaving Excalidraw its own defaults', async () => {
+      configure();
+      await mount();
+      expect(renderCalls()).toStrictEqual([[{}]]);
+    });
+
+    it('renders with exactly the inputs that are set', async () => {
+      configure();
+      const fixture = await startLoading(BoundInputsHost);
+      await fixture.whenStable();
+      expect(renderCalls().at(-1)).toStrictEqual([
+        { theme: 'light', viewModeEnabled: false, initialData: { elements: [] } },
+      ]);
+    });
+
+    it('pushes changed inputs into the same mounted editor instead of remounting', async () => {
+      configure();
+      const fixture = await startLoading(BoundInputsHost);
+      await fixture.whenStable();
+      const [{ renderer }] = fake.created;
+
+      fixture.componentInstance.theme.set('dark');
+      fixture.componentInstance.viewMode.set(true);
+      await fixture.whenStable();
+
+      expect(fake.created).toHaveLength(1);
+      expect(renderer.destroy).not.toHaveBeenCalled();
+      expect(renderCalls().at(-1)?.[0]).toMatchObject({ theme: 'dark', viewModeEnabled: true });
+    });
+
+    it('reads initialData only at mount, so a later change neither re-renders nor reaches Excalidraw', async () => {
+      configure();
+      const fixture = await startLoading(BoundInputsHost);
+      await fixture.whenStable();
+      const rendersAfterMount = renderCalls().length;
+
+      fixture.componentInstance.initialData.set({ elements: [], appState: { name: 'later' } });
+      await fixture.whenStable();
+      fixture.componentInstance.theme.set('dark');
+      await fixture.whenStable();
+
+      expect(renderCalls()).toHaveLength(rendersAfterMount + 1);
+      expect(renderCalls().at(-1)?.[0]).not.toHaveProperty('initialData');
+    });
+
+    it('accepts boolean inputs as plain attributes', async () => {
+      configure();
+      const fixture = await startLoading(AttributeBooleansHost);
+      await fixture.whenStable();
+      expect(renderCalls().at(-1)).toStrictEqual([
+        { viewModeEnabled: true, zenModeEnabled: false, gridModeEnabled: true },
+      ]);
+    });
   });
 });

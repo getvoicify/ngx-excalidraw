@@ -22,6 +22,14 @@ class OnPushHost {
   readonly status = signal('loading');
 }
 
+@Component({
+  imports: [ExcalidrawComponent],
+  template: `<ngx-excalidraw [theme]="theme()" />`,
+})
+class ThemedHost {
+  readonly theme = signal<'light' | 'dark'>('light');
+}
+
 class RecordingZone extends NoopNgZone {
   inside = true;
 
@@ -104,5 +112,27 @@ describe('ExcalidrawComponent change detection', () => {
 
     expect(handed.zoneInsideAtRender).toBe(false);
     expect(zoneInsideAtEmit).toBe(true);
+  });
+
+  it('pushes input changes into React outside the Angular zone', async () => {
+    const zone = new RecordingZone();
+    const { handed, factory } = rendererHandingOverApi();
+    TestBed.configureTestingModule({
+      providers: [
+        provideZonelessChangeDetection(),
+        { provide: NgZone, useValue: zone },
+        { provide: EXCALIDRAW_RENDERER_LOADER, useValue: () => Promise.resolve(factory(zone)) },
+      ],
+    });
+    const fixture = TestBed.createComponent(ThemedHost);
+    await fixture.whenStable();
+    await flush();
+    await fixture.whenStable();
+    handed.zoneInsideAtRender = undefined;
+
+    fixture.componentInstance.theme.set('dark');
+    await fixture.whenStable();
+
+    expect(handed.zoneInsideAtRender).toBe(false);
   });
 });

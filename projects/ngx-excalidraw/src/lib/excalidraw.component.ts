@@ -1,4 +1,5 @@
 import {
+  booleanAttribute,
   ChangeDetectionStrategy,
   Component,
   computed,
@@ -6,6 +7,7 @@ import {
   effect,
   ElementRef,
   inject,
+  input,
   NgZone,
   output,
   PLATFORM_ID,
@@ -15,10 +17,14 @@ import {
   untracked,
 } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-import type { ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types';
+import type { ExcalidrawImperativeAPI, ExcalidrawProps } from '@excalidraw/excalidraw/types';
 import { APP_FIRST_SETTLED } from './app-settled';
 import { EXCALIDRAW_CONFIG } from './provide-excalidraw';
-import type { ExcalidrawRenderer, ExcalidrawRendererFactory } from './renderer';
+import type {
+  ExcalidrawRenderer,
+  ExcalidrawRendererFactory,
+  ExcalidrawRenderProps,
+} from './renderer';
 import { EXCALIDRAW_RENDERER_LOADER } from './renderer-loader';
 import { loadStylesheetOnce } from './stylesheet';
 
@@ -44,6 +50,19 @@ import { loadStylesheetOnce } from './stylesheet';
   `,
 })
 export class ExcalidrawComponent {
+  readonly initialData = input<ExcalidrawProps['initialData']>();
+  readonly theme = input<ExcalidrawProps['theme']>();
+  readonly viewModeEnabled = input(undefined, { transform: booleanAttribute });
+  readonly zenModeEnabled = input(undefined, { transform: booleanAttribute });
+  readonly gridModeEnabled = input(undefined, { transform: booleanAttribute });
+  readonly objectsSnapModeEnabled = input(undefined, { transform: booleanAttribute });
+  readonly langCode = input<ExcalidrawProps['langCode']>();
+  readonly name = input<ExcalidrawProps['name']>();
+  readonly UIOptions = input<ExcalidrawProps['UIOptions']>();
+  readonly autoFocus = input(undefined, { transform: booleanAttribute });
+  readonly handleKeyboardGlobally = input(undefined, { transform: booleanAttribute });
+  readonly detectScroll = input(undefined, { transform: booleanAttribute });
+
   readonly api = output<ExcalidrawImperativeAPI>();
   readonly loadError = output<unknown>();
 
@@ -68,19 +87,47 @@ export class ExcalidrawComponent {
 
   protected readonly mounted = computed(() => this.bundle.hasValue() && !this.mountFailure());
 
+  private readonly renderProps = computed(() =>
+    definedOnly({
+      theme: this.theme(),
+      viewModeEnabled: this.viewModeEnabled(),
+      zenModeEnabled: this.zenModeEnabled(),
+      gridModeEnabled: this.gridModeEnabled(),
+      objectsSnapModeEnabled: this.objectsSnapModeEnabled(),
+      langCode: this.langCode(),
+      name: this.name(),
+      UIOptions: this.UIOptions(),
+      autoFocus: this.autoFocus(),
+      handleKeyboardGlobally: this.handleKeyboardGlobally(),
+      detectScroll: this.detectScroll(),
+    }),
+  );
+  private readonly mountProps = computed(() =>
+    definedOnly({ ...this.renderProps(), initialData: this.initialData() }),
+  );
+  private readonly editor = signal<ExcalidrawRenderer | null>(null);
+
   constructor() {
     effect((onCleanup) => {
       if (!this.bundle.hasValue()) return;
       const createRenderer = this.bundle.value();
       try {
         const mounted = untracked(() => this.mountRenderer(createRenderer));
+        this.editor.set(mounted.renderer);
         onCleanup(() => {
+          this.editor.set(null);
           mounted.renderer.destroy();
           this.dom.removeChild(this.host, mounted.element);
         });
       } catch (error) {
         this.mountFailure.set({ error });
       }
+    });
+
+    effect(() => {
+      const props = this.renderProps();
+      const editor = untracked(this.editor);
+      if (editor) this.zone.runOutsideAngular(() => editor.render(props));
     });
 
     effect(() => {
@@ -112,7 +159,7 @@ export class ExcalidrawComponent {
         renderer = createRenderer(element, {
           onApi: (api) => this.zone.run(() => this.api.emit(api)),
         });
-        renderer.render({});
+        renderer.render(this.mountProps());
         return { element, renderer };
       } catch (error) {
         renderer?.destroy();
@@ -121,4 +168,8 @@ export class ExcalidrawComponent {
       }
     });
   }
+}
+
+function definedOnly<T extends object>(props: T): ExcalidrawRenderProps {
+  return Object.fromEntries(Object.entries(props).filter(([, value]) => value !== undefined));
 }
