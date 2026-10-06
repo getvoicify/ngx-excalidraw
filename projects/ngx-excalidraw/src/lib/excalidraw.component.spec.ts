@@ -85,6 +85,14 @@ class BoundInputsHost {
 })
 class AttributeBooleansHost {}
 
+@Component({
+  imports: [ExcalidrawComponent],
+  template: `<ngx-excalidraw [detectScroll]="detectScroll()" />`,
+})
+class OptionalBooleanHost {
+  readonly detectScroll = signal<boolean | undefined>(true);
+}
+
 describe('ExcalidrawComponent', () => {
   let loader: ReturnType<typeof vi.fn>;
   let fake: FakeRendererHandle;
@@ -391,6 +399,18 @@ describe('ExcalidrawComponent', () => {
       await fixture.whenStable();
 
       expect(renderCalls()).toHaveLength(rendersAfterMount + 1);
+    });
+
+    it('falls back to Excalidraw\'s default when a boolean input is bound to undefined', async () => {
+      configure();
+      const fixture = await startLoading(OptionalBooleanHost);
+      await fixture.whenStable();
+      expect(renderCalls().at(-1)).toStrictEqual([{ detectScroll: true }]);
+
+      fixture.componentInstance.detectScroll.set(undefined);
+      await fixture.whenStable();
+
+      expect(renderCalls().at(-1)).toStrictEqual([{}]);
     });
 
     it('accepts boolean inputs as plain attributes', async () => {

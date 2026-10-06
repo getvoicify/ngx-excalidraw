@@ -52,16 +52,16 @@ import { loadStylesheetOnce } from './stylesheet';
 export class ExcalidrawComponent {
   readonly initialData = input<ExcalidrawProps['initialData']>();
   readonly theme = input<ExcalidrawProps['theme']>();
-  readonly viewModeEnabled = input(undefined, { transform: booleanAttribute });
-  readonly zenModeEnabled = input(undefined, { transform: booleanAttribute });
-  readonly gridModeEnabled = input(undefined, { transform: booleanAttribute });
-  readonly objectsSnapModeEnabled = input(undefined, { transform: booleanAttribute });
+  readonly viewModeEnabled = input(undefined, { transform: optionalBooleanAttribute });
+  readonly zenModeEnabled = input(undefined, { transform: optionalBooleanAttribute });
+  readonly gridModeEnabled = input(undefined, { transform: optionalBooleanAttribute });
+  readonly objectsSnapModeEnabled = input(undefined, { transform: optionalBooleanAttribute });
   readonly langCode = input<ExcalidrawProps['langCode']>();
   readonly name = input<ExcalidrawProps['name']>();
   readonly UIOptions = input<ExcalidrawProps['UIOptions']>();
-  readonly autoFocus = input(undefined, { transform: booleanAttribute });
-  readonly handleKeyboardGlobally = input(undefined, { transform: booleanAttribute });
-  readonly detectScroll = input(undefined, { transform: booleanAttribute });
+  readonly autoFocus = input(undefined, { transform: optionalBooleanAttribute });
+  readonly handleKeyboardGlobally = input(undefined, { transform: optionalBooleanAttribute });
+  readonly detectScroll = input(undefined, { transform: optionalBooleanAttribute });
 
   readonly api = output<ExcalidrawImperativeAPI>();
   readonly loadError = output<unknown>();
@@ -176,4 +176,8 @@ export class ExcalidrawComponent {
 
 function definedOnly<T extends object>(props: T): ExcalidrawRenderProps {
   return Object.fromEntries(Object.entries(props).filter(([, value]) => value !== undefined));
+}
+
+function optionalBooleanAttribute(value: unknown): boolean | undefined {
+  return value === undefined ? undefined : booleanAttribute(value);
 }
