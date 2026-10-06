@@ -1,112 +1,110 @@
-import { readdirSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
-import { test } from 'node:test';
+import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { fileURLToPath } from 'node:url';
-import ts from 'typescript';
+import { productionSources, publicApiViolations } from './demo-public-api.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const appDir = join(root, 'projects/demo/src/app');
-const allowedModule = /^(?:@angular\/|rxjs(?:\/|$)|ngx-excalidraw$|\.{1,2}\/)/;
-const globalObjects = new Set(['window', 'globalThis', 'self']);
+const srcRoot = join(root, 'projects/demo/src');
+const appFile = join(srcRoot, 'app/fixture.ts');
+const serverFile = join(srcRoot, 'server.ts');
 
-const appFiles = readdirSync(appDir, { recursive: true })
-  .filter((file) => file.endsWith('.ts') && !file.endsWith('.spec.ts'))
-  .map((file) => join(appDir, file));
+const violations = (text, path = appFile) => publicApiViolations({ path, text, srcRoot });
+const rejects = (text, path) => assert.notDeepEqual(violations(text, path), []);
+const accepts = (text, path) => assert.deepEqual(violations(text, path), []);
 
-function parse(file) {
-  return ts.createSourceFile(file, readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true);
-}
+describe('public API guard', () => {
+  test('accepts Angular, rxjs, ngx-excalidraw and sibling app files', () =>
+    accepts(`
+      import { Component } from '@angular/core';
+      import { provideServerRendering } from '@angular/ssr';
+      import { filter } from 'rxjs';
+      import { map } from 'rxjs/operators';
+      import { ExcalidrawComponent, type ExcalidrawImperativeAPI } from 'ngx-excalidraw';
+      import { appConfig } from './app.config';
+      import { App } from '../app/app';
+      const href = window.location.href;
+    `));
 
-function moduleSpecifiers(source) {
-  const specifiers = [];
-  const visit = (node) => {
-    if (
-      (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) &&
-      node.moduleSpecifier &&
-      ts.isStringLiteral(node.moduleSpecifier)
-    ) {
-      specifiers.push(node.moduleSpecifier.text);
-    }
-    if (
-      ts.isCallExpression(node) &&
-      node.expression.kind === ts.SyntaxKind.ImportKeyword &&
-      node.arguments[0] &&
-      ts.isStringLiteralLike(node.arguments[0])
-    ) {
-      specifiers.push(node.arguments[0].text);
-    }
-    if (ts.isImportTypeNode(node) && ts.isLiteralTypeNode(node.argument)) {
-      specifiers.push(node.argument.literal.text);
-    }
-    ts.forEachChild(node, visit);
-  };
-  visit(source);
-  return specifiers;
-}
+  test('rejects Excalidraw and React imports', () => {
+    rejects(`import type { AppState } from '@excalidraw/excalidraw/types';`);
+    rejects(`import React from 'react';`);
+    rejects(`export { createRoot } from 'react-dom/client';`);
+    rejects(`type A = import('@excalidraw/excalidraw').AppState;`);
+  });
 
-function unwrap(expression) {
-  while (
-    ts.isParenthesizedExpression(expression) ||
-    ts.isAsExpression(expression) ||
-    ts.isTypeAssertionExpression(expression) ||
-    ts.isNonNullExpression(expression) ||
-    ts.isSatisfiesExpression(expression)
-  ) {
-    expression = expression.expression;
-  }
-  return expression;
-}
+  test('rejects relative imports that leave the demo sources', () => {
+    rejects(
+      `import type { AppState } from '../../../../node_modules/@excalidraw/excalidraw/types';`,
+    );
+    rejects(`import { hooks } from '../e2e/e2e-hooks.config';`);
+    rejects(`import { x } from '../../../ngx-excalidraw/src/lib/react-bridge';`);
+    rejects(`import { x } from './node_modules/react';`);
+  });
 
-function globalAliases(source) {
-  const aliases = new Set(globalObjects);
-  const visit = (node) => {
-    if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.initializer) {
-      const value = unwrap(node.initializer);
-      if (ts.isIdentifier(value) && aliases.has(value.text)) aliases.add(node.name.text);
-    }
-    ts.forEachChild(node, visit);
-  };
-  visit(source);
-  return aliases;
-}
+  test('checks CommonJS and dynamic imports like static ones', () => {
+    rejects(`const excalidraw = require('@excalidraw/excalidraw');`);
+    rejects(`import excalidraw = require('@excalidraw/excalidraw');`);
+    rejects(`const excalidraw = await import('@excalidraw/excalidraw');`);
+    rejects(`const name = 'react'; const react = await import(name);`);
+    rejects(`const name = 'react'; const react = require(name);`);
+  });
 
-function underscoredGlobals(source) {
-  const globals = globalAliases(source);
-  const found = [];
-  const visit = (node) => {
-    const name = ts.isPropertyAccessExpression(node)
-      ? node.name.text
-      : ts.isElementAccessExpression(node) && ts.isStringLiteralLike(node.argumentExpression)
-        ? node.argumentExpression.text
-        : undefined;
-    if (name?.startsWith('__')) {
-      const target = unwrap(node.expression);
-      if (ts.isIdentifier(target) && globals.has(target.text)) {
-        found.push(`${target.text}.${name}`);
-      }
-    }
-    ts.forEachChild(node, visit);
-  };
-  visit(source);
-  return found;
-}
+  test('rejects double-underscore names however they reach the global object', () => {
+    rejects(`const { __excalidrawApi } = window;`);
+    rejects(`const key = '__excalidrawApi'; (window as any)[key] = 1;`);
+    rejects('const id = 1; (window as any)[`__hook${id}`] = 1;');
+    rejects('(window as any)[`__hook`] = 1;');
+    rejects(`(globalThis as any).window.__excalidrawApi = 1;`);
+    rejects(`(document.defaultView as any).__excalidrawApi = 1;`);
+    rejects(`let w: any; w = window; w.__excalidrawApi = 1;`);
+  });
 
-test('the demo app has source files to check', () => {
-  assert.ok(appFiles.length > 0);
+  test('rejects writing onto the global object', () => {
+    rejects(`Object.assign(window, { hook: 1 });`);
+    rejects(`Object.assign(globalThis, { hook: 1 });`);
+    rejects(`Object.assign(self, { hook: 1 });`);
+    rejects(`Object.assign(document.defaultView!, { hook: 1 });`);
+    rejects(`Object.defineProperty(window, 'hook', { value: 1 });`);
+    rejects(`Reflect.set(globalThis, 'hook', 1);`);
+  });
+
+  test('allows express and node built-ins in the server entry only', () => {
+    const serverImports = `
+      import express from 'express';
+      import { join } from 'node:path';
+      import { AngularNodeAppEngine } from '@angular/ssr/node';
+    `;
+    accepts(serverImports, serverFile);
+    rejects(`import express from 'express';`);
+    rejects(`import { join } from 'node:path';`);
+    rejects(`import React from 'react';`, serverFile);
+  });
+
+  test('fails closed on sources it cannot parse', () =>
+    rejects(`import { Component } from '@angular/core'; const = ;`));
 });
 
-for (const file of appFiles) {
-  const name = relative(root, file);
+describe('the demo production sources', () => {
+  const sources = productionSources(srcRoot);
 
-  test(`${name} imports only Angular, rxjs, ngx-excalidraw and its own files`, () => {
+  test('cover the browser and server entries and the app, but not the e2e build', () => {
+    const names = sources.map((file) => relative(srcRoot, file));
+    for (const entry of ['main.ts', 'main.server.ts', 'server.ts', join('app', 'app.ts')]) {
+      assert.ok(names.includes(entry), entry);
+    }
     assert.deepEqual(
-      moduleSpecifiers(parse(file)).filter((specifier) => !allowedModule.test(specifier)),
+      names.filter((name) => name.startsWith('e2e') || name.endsWith('.spec.ts')),
       [],
     );
   });
 
-  test(`${name} keeps no test hooks on the global object`, () => {
-    assert.deepEqual(underscoredGlobals(parse(file)), []);
-  });
-}
+  for (const file of sources) {
+    test(`${relative(root, file)} uses only the public API`, () =>
+      assert.deepEqual(
+        publicApiViolations({ path: file, text: readFileSync(file, 'utf8'), srcRoot }),
+        [],
+      ));
+  }
+});
