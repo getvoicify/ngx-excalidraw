@@ -1,12 +1,20 @@
 import { PLATFORM_ID } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import packageJson from '../package.json';
 import * as publicApi from './public-api';
-import { NGX_EXCALIDRAW_VERSION } from './public-api';
 
 describe('ngx-excalidraw public API', () => {
-  it('exposes the version declared in the library package.json', () => {
-    expect(NGX_EXCALIDRAW_VERSION).toBe(packageJson.version);
+  it('exports exactly the documented runtime surface', () => {
+    expect(Object.keys(publicApi).sort()).toEqual([
+      'EXCALIDRAW_LIBRARY',
+      'EXCALIDRAW_MODULE_LOADER',
+      'EXCALIDRAW_RENDERER_LOADER',
+      'ExcalidrawComponent',
+      'ExcalidrawData',
+      'localStorageLibraryAdapter',
+      'preloadExcalidraw',
+      'provideExcalidraw',
+      'provideExcalidrawLibrary',
+    ]);
   });
 
   it('exposes the injectable Excalidraw data utilities', async () => {

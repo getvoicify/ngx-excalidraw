@@ -1,5 +1,3 @@
-export const NGX_EXCALIDRAW_VERSION = '0.0.1';
-
 export { ExcalidrawComponent } from './lib/excalidraw.component';
 export { provideExcalidraw, type ExcalidrawConfig } from './lib/provide-excalidraw';
 export {
