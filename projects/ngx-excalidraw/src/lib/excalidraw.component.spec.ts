@@ -1,4 +1,10 @@
-import { Component, PLATFORM_ID, provideZonelessChangeDetection, Type } from '@angular/core';
+import {
+  Component,
+  PendingTasks,
+  PLATFORM_ID,
+  provideZonelessChangeDetection,
+  Type,
+} from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import type { ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types';
 import { ExcalidrawComponent } from './excalidraw.component';
@@ -122,6 +128,38 @@ describe('ExcalidrawComponent', () => {
     expect(
       (fixture.nativeElement as HTMLElement).querySelector('.ngx-excalidraw-placeholder'),
     ).not.toBeNull();
+  });
+
+  it('waits for the application to become stable before loading the bundle', async () => {
+    configure();
+    const done = TestBed.inject(PendingTasks).add();
+    TestBed.createComponent(ExcalidrawComponent);
+    TestBed.tick();
+    await flush();
+    expect(loader).not.toHaveBeenCalled();
+    done();
+    await flush();
+    TestBed.tick();
+    await flush();
+    expect(loader).toHaveBeenCalledTimes(1);
+  });
+
+  it('loads anyway after the stability fallback when the app never settles', async () => {
+    vi.useFakeTimers();
+    try {
+      configure();
+      TestBed.inject(PendingTasks).add();
+      TestBed.createComponent(ExcalidrawComponent);
+      TestBed.tick();
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(loader).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(5000);
+      TestBed.tick();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(loader).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('creates the renderer on a mount element inside the component and renders it', async () => {

@@ -1,5 +1,4 @@
 import {
-  afterNextRender,
   ChangeDetectionStrategy,
   Component,
   computed,
@@ -12,11 +11,11 @@ import {
   PLATFORM_ID,
   Renderer2,
   resource,
-  signal,
   untracked,
 } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import type { ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types';
+import { APP_FIRST_SETTLED } from './app-settled';
 import { EXCALIDRAW_CONFIG } from './provide-excalidraw';
 import type { ExcalidrawRendererFactory } from './renderer';
 import { EXCALIDRAW_RENDERER_LOADER } from './renderer-loader';
@@ -53,25 +52,23 @@ export class ExcalidrawComponent {
   private readonly document = inject(DOCUMENT);
   private readonly config = inject(EXCALIDRAW_CONFIG);
   private readonly loadRenderer = inject(EXCALIDRAW_RENDERER_LOADER);
-  private readonly started = signal(false);
+  private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
+  private readonly appSettled = inject(APP_FIRST_SETTLED);
   private readonly bundle = resource({
-    params: () => this.started() || undefined,
+    params: () => (this.isBrowser && this.appSettled()) || undefined,
     loader: ({ abortSignal }) => this.loadBundle(abortSignal),
   });
 
   protected readonly mounted = computed(() => this.bundle.hasValue());
 
   constructor() {
-    const isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
-    afterNextRender(() => this.started.set(isBrowser));
-
     effect((onCleanup) => {
       if (!this.bundle.hasValue()) return;
       const createRenderer = this.bundle.value();
-      const mountElement = untracked(() => this.mountRenderer(createRenderer));
+      const mounted = untracked(() => this.mountRenderer(createRenderer));
       onCleanup(() => {
-        mountElement.renderer.destroy();
-        this.dom.removeChild(this.host, mountElement.element);
+        mounted.renderer.destroy();
+        this.dom.removeChild(this.host, mounted.element);
       });
     });
 
