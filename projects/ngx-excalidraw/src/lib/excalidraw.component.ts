@@ -11,13 +11,14 @@ import {
   PLATFORM_ID,
   Renderer2,
   resource,
+  signal,
   untracked,
 } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import type { ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types';
 import { APP_FIRST_SETTLED } from './app-settled';
 import { EXCALIDRAW_CONFIG } from './provide-excalidraw';
-import type { ExcalidrawRendererFactory } from './renderer';
+import type { ExcalidrawRenderer, ExcalidrawRendererFactory } from './renderer';
 import { EXCALIDRAW_RENDERER_LOADER } from './renderer-loader';
 import { loadStylesheetOnce } from './stylesheet';
 
@@ -59,22 +60,32 @@ export class ExcalidrawComponent {
     loader: ({ abortSignal }) => this.loadBundle(abortSignal),
   });
 
-  protected readonly mounted = computed(() => this.bundle.hasValue());
+  private readonly mountFailure = signal<{ error: unknown } | null>(null);
+  private readonly failure = computed(() => {
+    const loadError = this.bundle.error();
+    return loadError ? { error: loadError } : this.mountFailure();
+  });
+
+  protected readonly mounted = computed(() => this.bundle.hasValue() && !this.mountFailure());
 
   constructor() {
     effect((onCleanup) => {
       if (!this.bundle.hasValue()) return;
       const createRenderer = this.bundle.value();
-      const mounted = untracked(() => this.mountRenderer(createRenderer));
-      onCleanup(() => {
-        mounted.renderer.destroy();
-        this.dom.removeChild(this.host, mounted.element);
-      });
+      try {
+        const mounted = untracked(() => this.mountRenderer(createRenderer));
+        onCleanup(() => {
+          mounted.renderer.destroy();
+          this.dom.removeChild(this.host, mounted.element);
+        });
+      } catch (error) {
+        this.mountFailure.set({ error });
+      }
     });
 
     effect(() => {
-      const error = this.bundle.error();
-      if (error) untracked(() => this.loadError.emit(error));
+      const failure = this.failure();
+      if (failure) untracked(() => this.loadError.emit(failure.error));
     });
   }
 
@@ -96,11 +107,18 @@ export class ExcalidrawComponent {
       this.dom.setStyle(element, 'position', 'absolute');
       this.dom.setStyle(element, 'inset', '0');
       this.dom.appendChild(this.host, element);
-      const renderer = createRenderer(element, {
-        onApi: (api) => this.zone.run(() => this.api.emit(api)),
-      });
-      renderer.render({});
-      return { element, renderer };
+      let renderer: ExcalidrawRenderer | undefined;
+      try {
+        renderer = createRenderer(element, {
+          onApi: (api) => this.zone.run(() => this.api.emit(api)),
+        });
+        renderer.render({});
+        return { element, renderer };
+      } catch (error) {
+        renderer?.destroy();
+        this.dom.removeChild(this.host, element);
+        throw error;
+      }
     });
   }
 }

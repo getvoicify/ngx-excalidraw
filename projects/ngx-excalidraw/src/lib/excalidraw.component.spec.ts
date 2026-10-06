@@ -261,6 +261,51 @@ describe('ExcalidrawComponent', () => {
     delete (window as unknown as { EXCALIDRAW_ASSET_PATH?: string }).EXCALIDRAW_ASSET_PATH;
   });
 
+  it('reports a renderer that fails to mount and leaves no half-mounted editor', async () => {
+    const failure = new Error('createRoot failed');
+    loader.mockImplementation(() =>
+      Promise.resolve(() => {
+        throw failure;
+      }),
+    );
+    configure();
+    const fixture = TestBed.createComponent(ExcalidrawComponent);
+    const errors: unknown[] = [];
+    fixture.componentInstance.loadError.subscribe((error) => errors.push(error));
+    await fixture.whenStable();
+    await flush();
+    await fixture.whenStable();
+    const host = fixture.nativeElement as HTMLElement;
+    expect(errors).toEqual([failure]);
+    expect(host.querySelector('.ngx-excalidraw-placeholder')).not.toBeNull();
+    expect(host.querySelector('.ngx-excalidraw-mount')).toBeNull();
+  });
+
+  it('tears down a renderer whose first render throws and reports it', async () => {
+    const failure = new Error('render failed');
+    const destroy = vi.fn();
+    loader.mockImplementation(() =>
+      Promise.resolve(() => ({
+        render: () => {
+          throw failure;
+        },
+        destroy,
+      })),
+    );
+    configure();
+    const fixture = TestBed.createComponent(ExcalidrawComponent);
+    const errors: unknown[] = [];
+    fixture.componentInstance.loadError.subscribe((error) => errors.push(error));
+    await fixture.whenStable();
+    await flush();
+    await fixture.whenStable();
+    const host = fixture.nativeElement as HTMLElement;
+    expect(errors).toEqual([failure]);
+    expect(destroy).toHaveBeenCalledTimes(1);
+    expect(host.querySelector('.ngx-excalidraw-placeholder')).not.toBeNull();
+    expect(host.querySelector('.ngx-excalidraw-mount')).toBeNull();
+  });
+
   it('emits loadError and keeps the placeholder when the bundle fails to load', async () => {
     const failure = new Error('chunk failed');
     loader.mockImplementation(() => Promise.reject(failure));
