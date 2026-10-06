@@ -125,7 +125,7 @@ function assertPackage(packageDir) {
   const sources = Object.fromEntries(
     fesm.map((file) => [file, readFileSync(join(packageDir, file), 'utf8')]),
   );
-  const external = /^(react|react-dom(\/.*)?|@excalidraw\/excalidraw(\/.*)?)$/;
+  const external = /^(react|react-dom|@excalidraw\/excalidraw)(\/.*)?$/;
   const staticReact = fesm.filter((file) =>
     staticImports(sources[file]).some((s) => external.test(s)),
   );
