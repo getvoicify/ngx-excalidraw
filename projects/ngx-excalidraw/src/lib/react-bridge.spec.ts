@@ -44,7 +44,10 @@ describe('React bridge', () => {
   it('hands the API over when Excalidraw constructs its editor in a later commit', async () => {
     const onApi = vi.fn();
     const { api, Excalidraw, finishLoading } = excalidrawConstructingItsEditorAfterLoading();
-    const renderer = createRendererFactory({ react, reactDomClient, Excalidraw })(host, { onApi });
+    const renderer = createRendererFactory({ react, reactDomClient, Excalidraw })(host, {
+      onApi,
+      onError: vi.fn(),
+    });
 
     await act(async () => renderer.render({}));
     expect(onApi).not.toHaveBeenCalled();
@@ -57,7 +60,10 @@ describe('React bridge', () => {
   it('hands the API to Angular only after React has committed the render', async () => {
     const onApi = vi.fn();
     const { api, handOversDuringRender, Excalidraw } = excalidrawHandingOverDuringRender(onApi);
-    const renderer = createRendererFactory({ react, reactDomClient, Excalidraw })(host, { onApi });
+    const renderer = createRendererFactory({ react, reactDomClient, Excalidraw })(host, {
+      onApi,
+      onError: vi.fn(),
+    });
 
     await act(async () => renderer.render({}));
 
@@ -69,7 +75,10 @@ describe('React bridge', () => {
   it('hands the API over only once across re-renders', async () => {
     const onApi = vi.fn();
     const { Excalidraw } = excalidrawHandingOverDuringRender(onApi);
-    const renderer = createRendererFactory({ react, reactDomClient, Excalidraw })(host, { onApi });
+    const renderer = createRendererFactory({ react, reactDomClient, Excalidraw })(host, {
+      onApi,
+      onError: vi.fn(),
+    });
 
     await act(async () => renderer.render({}));
     await act(async () => renderer.render({ viewModeEnabled: true }));
@@ -78,10 +87,46 @@ describe('React bridge', () => {
     await act(async () => renderer.destroy());
   });
 
+  it('reports a crash inside Excalidraw through onError instead of letting it escape', async () => {
+    const crash = new Error('Excalidraw crashed');
+    const Excalidraw = () => {
+      throw crash;
+    };
+    const onError = vi.fn();
+    const escaped: unknown[] = [];
+    const onWindowError = (event: ErrorEvent) => {
+      escaped.push(event.error);
+      event.preventDefault();
+    };
+    window.addEventListener('error', onWindowError);
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    try {
+      const renderer = createRendererFactory({ react, reactDomClient, Excalidraw })(host, {
+        onApi: vi.fn(),
+        onError,
+      });
+
+      await act(async () => renderer.render({})).then(
+        () => undefined,
+        (error: unknown) => {
+          escaped.push(error);
+        },
+      );
+
+      await vi.waitFor(() => expect(onError.mock.calls).toEqual([[crash]]));
+      expect(escaped).toEqual([]);
+      await act(async () => renderer.destroy());
+    } finally {
+      consoleError.mockRestore();
+      window.removeEventListener('error', onWindowError);
+    }
+  });
+
   it('unmounts Excalidraw from the host on destroy', async () => {
     const { Excalidraw } = excalidrawHandingOverDuringRender(vi.fn());
     const renderer = createRendererFactory({ react, reactDomClient, Excalidraw })(host, {
       onApi: vi.fn(),
+      onError: vi.fn(),
     });
     await act(async () => renderer.render({}));
     expect(host.querySelector('.excalidraw')).not.toBeNull();

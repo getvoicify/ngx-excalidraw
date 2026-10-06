@@ -30,8 +30,9 @@ Angular 22+ wrapper around `@excalidraw/excalidraw` (React). Package name: `ngx-
   probe child to `<Excalidraw>` whose `useEffect` hands the API to Angular once, after the editor
   commits. Anything later passed as Excalidraw `children` must keep the probe.
 - **Failure handling**: a failed bundle load is retried by the next mount (`memoizeUntilRejected`);
-  a failed stylesheet link is removed so it is re-requested; load or mount failures emit
-  `loadError` and keep the placeholder. `preloadExcalidraw()` resolves `true`/`false`.
+  a failed stylesheet link is removed so it is re-requested; load and mount failures, and crashes
+  inside Excalidraw (caught by an error boundary in the bridge, since React 19's `root.render` never
+  throws them synchronously), emit `editorError`, tear the editor down and restore the placeholder. `preloadExcalidraw()` resolves `true`/`false`.
 - **Performance**:
   - React/Excalidraw are never in the initial chunk (e2e asserts the initial HTML's JS has no
     Excalidraw code and that the chunk is requested only after first stability).

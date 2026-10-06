@@ -64,7 +64,7 @@ export class ExcalidrawComponent {
   readonly detectScroll = input(undefined, { transform: optionalBooleanAttribute });
 
   readonly api = output<ExcalidrawImperativeAPI>();
-  readonly loadError = output<unknown>();
+  readonly editorError = output<unknown>();
 
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
   private readonly dom = inject(Renderer2);
@@ -128,16 +128,12 @@ export class ExcalidrawComponent {
         ...this.renderProps(),
         ...definedOnly<ExcalidrawRenderProps>({ initialData: untracked(this.initialData) }),
       };
-      try {
-        this.zone.runOutsideAngular(() => editor.render(props));
-      } catch (error) {
-        this.mountFailure.set({ error });
-      }
+      this.zone.runOutsideAngular(() => editor.render(props));
     });
 
     effect(() => {
       const failure = this.failure();
-      if (failure) untracked(() => this.loadError.emit(failure.error));
+      if (failure) untracked(() => this.editorError.emit(failure.error));
     });
   }
 
@@ -164,6 +160,7 @@ export class ExcalidrawComponent {
           element,
           renderer: createRenderer(element, {
             onApi: (api) => this.zone.run(() => this.api.emit(api)),
+            onError: (error) => this.zone.run(() => this.mountFailure.set({ error })),
           }),
         };
       } catch (error) {

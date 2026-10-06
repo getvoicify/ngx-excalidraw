@@ -1,10 +1,10 @@
-import type { ComponentType } from 'react';
+import type { ComponentType, ReactNode } from 'react';
 import type { ExcalidrawImperativeAPI, ExcalidrawProps } from '@excalidraw/excalidraw/types';
 import { once } from './once';
 import type { ExcalidrawRendererFactory, ExcalidrawRenderProps } from './renderer';
 
 export interface ReactBridgeModules {
-  react: Pick<typeof import('react'), 'createElement' | 'useEffect' | 'useRef'>;
+  react: Pick<typeof import('react'), 'Component' | 'createElement' | 'useEffect' | 'useRef'>;
   reactDomClient: Pick<typeof import('react-dom/client'), 'createRoot'>;
   Excalidraw: ComponentType<ExcalidrawProps>;
 }
@@ -21,6 +21,26 @@ export function createRendererFactory({
 }: ReactBridgeModules): ExcalidrawRendererFactory {
   type ApiRef = { current: ExcalidrawImperativeAPI | null };
   type HandOver = (api: ExcalidrawImperativeAPI) => void;
+  type ReportCrash = (error: unknown) => void;
+
+  class ReportCrashes extends react.Component<
+    { onError: ReportCrash; children?: ReactNode },
+    { crashed: boolean }
+  > {
+    override state = { crashed: false };
+
+    static getDerivedStateFromError() {
+      return { crashed: true };
+    }
+
+    override componentDidCatch(error: unknown) {
+      this.props.onError(error);
+    }
+
+    override render() {
+      return this.state.crashed ? null : this.props.children;
+    }
+  }
 
   const HandOverOnceEditorCommits = ({ api, onApi }: { api: ApiRef; onApi: HandOver }) => {
     react.useEffect(() => {
@@ -42,7 +62,14 @@ export function createRendererFactory({
     const root = reactDomClient.createRoot(host);
     const onApi = once(callbacks.onApi);
     return {
-      render: (props) => root.render(react.createElement(ExcalidrawHost, { props, onApi })),
+      render: (props) =>
+        root.render(
+          react.createElement(
+            ReportCrashes,
+            { onError: callbacks.onError },
+            react.createElement(ExcalidrawHost, { props, onApi }),
+          ),
+        ),
       destroy: () => root.unmount(),
     };
   };

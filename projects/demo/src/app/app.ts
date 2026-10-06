@@ -49,7 +49,7 @@ import { ExcalidrawComponent } from 'ngx-excalidraw';
         [theme]="theme()"
         [viewModeEnabled]="viewMode()"
         (api)="onApi($event)"
-        (loadError)="onLoadError($event)"
+        (editorError)="onEditorError($event)"
       />
     </main>
   `,
@@ -80,7 +80,7 @@ export class App {
     this.ready.set(true);
   }
 
-  protected onLoadError(error: unknown): void {
-    console.error('Excalidraw failed to load', error);
+  protected onEditorError(error: unknown): void {
+    console.error('Excalidraw failed', error);
   }
 }

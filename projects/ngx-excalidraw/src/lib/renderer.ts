@@ -4,6 +4,7 @@ export type ExcalidrawRenderProps = Omit<ExcalidrawProps, 'excalidrawAPI' | 'chi
 
 export interface ExcalidrawRendererCallbacks {
   onApi(api: ExcalidrawImperativeAPI): void;
+  onError(error: unknown): void;
 }
 
 export interface ExcalidrawRenderer {

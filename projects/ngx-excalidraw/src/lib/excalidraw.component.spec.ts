@@ -303,7 +303,7 @@ describe('ExcalidrawComponent', () => {
     configure();
     const fixture = TestBed.createComponent(ExcalidrawComponent);
     const errors: unknown[] = [];
-    fixture.componentInstance.loadError.subscribe((error) => errors.push(error));
+    fixture.componentInstance.editorError.subscribe((error) => errors.push(error));
     await fixture.whenStable();
     await flush();
     await fixture.whenStable();
@@ -313,38 +313,31 @@ describe('ExcalidrawComponent', () => {
     expect(host.querySelector('.ngx-excalidraw-mount')).toBeNull();
   });
 
-  it('tears down a renderer whose first render throws and reports it', async () => {
-    const failure = new Error('render failed');
-    const destroy = vi.fn();
-    loader.mockImplementation(() =>
-      Promise.resolve(() => ({
-        render: () => {
-          throw failure;
-        },
-        destroy,
-      })),
-    );
+  it('tears down the editor and reports a crash Excalidraw raises while running', async () => {
     configure();
-    const fixture = TestBed.createComponent(ExcalidrawComponent);
+    const fixture = await mount();
     const errors: unknown[] = [];
-    fixture.componentInstance.loadError.subscribe((error) => errors.push(error));
+    fixture.componentInstance.editorError.subscribe((error) => errors.push(error));
+    const [{ callbacks, renderer }] = fake.created;
+    const crash = new Error('Excalidraw crashed');
+
+    callbacks.onError(crash);
     await fixture.whenStable();
-    await flush();
-    await fixture.whenStable();
+
     const host = fixture.nativeElement as HTMLElement;
-    expect(errors).toEqual([failure]);
-    expect(destroy).toHaveBeenCalledTimes(1);
+    expect(errors).toEqual([crash]);
+    expect(renderer.destroy).toHaveBeenCalledTimes(1);
     expect(host.querySelector('.ngx-excalidraw-placeholder')).not.toBeNull();
     expect(host.querySelector('.ngx-excalidraw-mount')).toBeNull();
   });
 
-  it('emits loadError and keeps the placeholder when the bundle fails to load', async () => {
+  it('emits editorError and keeps the placeholder when the bundle fails to load', async () => {
     const failure = new Error('chunk failed');
     loader.mockImplementation(() => Promise.reject(failure));
     configure();
     const fixture = TestBed.createComponent(ExcalidrawComponent);
     const errors: unknown[] = [];
-    fixture.componentInstance.loadError.subscribe((error) => errors.push(error));
+    fixture.componentInstance.editorError.subscribe((error) => errors.push(error));
     await fixture.whenStable();
     await flush();
     await fixture.whenStable();
