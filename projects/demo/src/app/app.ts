@@ -10,7 +10,7 @@ import {
 } from '@angular/core';
 import { filter, take } from 'rxjs';
 import type { ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types';
-import { ExcalidrawComponent } from 'ngx-excalidraw';
+import { ExcalidrawComponent, type ExcalidrawSceneChange } from 'ngx-excalidraw';
 
 @Component({
   selector: 'app-root',
@@ -45,11 +45,13 @@ import { ExcalidrawComponent } from 'ngx-excalidraw';
         />
         View mode
       </label>
+      <p data-testid="scene-elements">elements: {{ elementCount() }}</p>
       <ngx-excalidraw
         [theme]="theme()"
         [viewModeEnabled]="viewMode()"
         (api)="onApi($event)"
         (editorError)="onEditorError($event)"
+        (sceneChange)="onSceneChange($event)"
       />
     </main>
   `,
@@ -58,6 +60,7 @@ export class App {
   protected readonly ready = signal(false);
   protected readonly dark = signal(false);
   protected readonly viewMode = signal(false);
+  protected readonly elementCount = signal(0);
   protected readonly theme = computed(() => (this.dark() ? 'dark' : 'light'));
 
   constructor() {
@@ -78,6 +81,12 @@ export class App {
     demoWindow.__excalidrawApi = api;
     demoWindow.__excalidrawApiEmissions = (demoWindow.__excalidrawApiEmissions ?? 0) + 1;
     this.ready.set(true);
+  }
+
+  protected onSceneChange({ elements }: ExcalidrawSceneChange): void {
+    const demoWindow = window as unknown as { __sceneChangeEmissions?: number };
+    demoWindow.__sceneChangeEmissions = (demoWindow.__sceneChangeEmissions ?? 0) + 1;
+    this.elementCount.set(elements.filter(({ isDeleted }) => !isDeleted).length);
   }
 
   protected onEditorError(error: unknown): void {

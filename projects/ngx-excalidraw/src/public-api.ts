@@ -13,3 +13,4 @@ export type {
   ExcalidrawRendererFactory,
   ExcalidrawRenderProps,
 } from './lib/renderer';
+export type { ExcalidrawSceneChange } from './lib/scene-change';

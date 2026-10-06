@@ -38,7 +38,13 @@ Angular 22+ wrapper around `@excalidraw/excalidraw` (React). Package name: `ngx-
     Excalidraw code and that the chunk is requested only after first stability).
   - One React root per component; later input changes go through `render(props)` / `excalidrawAPI`
     — never remount.
-  - `sceneChange` output is coalesced and skips emits when `getSceneVersion` is unchanged.
+  - `sceneChange` emits only scene edits: the bridge passes Excalidraw one stable `onChange` per
+    editor (so its memoization holds), keeps the latest call, and once per animation frame — outside
+    the Angular zone — compares `hashElementsVersion` (exported by 0.18; `getSceneVersion` is
+    deprecated there) plus the file ids against the last emission; only a changed scene re-enters
+    the zone. Hover, pan, zoom and selection never emit. Destroy cancels the pending frame. The
+    first scene seen after mount is emitted. Excalidraw already throttles pointer moves to one per
+    frame, so a drag still emits about once per frame.
 - **Inputs**: reactive (pushed into the mounted editor) = `theme`, `viewModeEnabled`,
   `zenModeEnabled`, `gridModeEnabled`, `langCode`, `UIOptions`. Mount-only (Excalidraw 0.18 reads
   them only at mount; changing them later is ignored on purpose) = `initialData`,

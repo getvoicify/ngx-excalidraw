@@ -26,6 +26,7 @@ import type {
   ExcalidrawRenderProps,
 } from './renderer';
 import { EXCALIDRAW_RENDERER_LOADER } from './renderer-loader';
+import type { ExcalidrawSceneChange } from './scene-change';
 import { loadStylesheetOnce } from './stylesheet';
 
 @Component({
@@ -65,6 +66,7 @@ export class ExcalidrawComponent {
 
   readonly api = output<ExcalidrawImperativeAPI>();
   readonly editorError = output<unknown>();
+  readonly sceneChange = output<ExcalidrawSceneChange>();
 
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
   private readonly dom = inject(Renderer2);
@@ -163,6 +165,9 @@ export class ExcalidrawComponent {
           renderer: createRenderer(element, {
             onApi: (api) => this.zone.run(() => this.api.emit(api)),
             onError: (error) => this.zone.run(() => this.mountFailure.set({ error })),
+            onSceneChange: (change) => {
+              if (this.editor()) this.zone.run(() => this.sceneChange.emit(change));
+            },
           }),
         };
       } catch (error) {

@@ -11,6 +11,7 @@ import type { ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types';
 import { ExcalidrawComponent } from './excalidraw.component';
 import { EXCALIDRAW_RENDERER_LOADER } from './renderer-loader';
 import type { ExcalidrawRendererCallbacks, ExcalidrawRendererFactory } from './renderer';
+import type { ExcalidrawSceneChange } from './scene-change';
 
 @Component({
   imports: [ExcalidrawComponent],
@@ -111,6 +112,30 @@ describe('ExcalidrawComponent change detection', () => {
     zone.runOutsideAngular(() => handed.callbacks!.onApi({} as ExcalidrawImperativeAPI));
 
     expect(handed.zoneInsideAtRender).toBe(false);
+    expect(zoneInsideAtEmit).toBe(true);
+  });
+
+  it('emits scene changes inside the Angular zone', async () => {
+    const zone = new RecordingZone();
+    const { handed, factory } = rendererHandingOverApi();
+    TestBed.configureTestingModule({
+      providers: [
+        provideZonelessChangeDetection(),
+        { provide: NgZone, useValue: zone },
+        { provide: EXCALIDRAW_RENDERER_LOADER, useValue: () => Promise.resolve(factory(zone)) },
+      ],
+    });
+    const fixture = TestBed.createComponent(ExcalidrawComponent);
+    let zoneInsideAtEmit: boolean | undefined;
+    fixture.componentInstance.sceneChange.subscribe(() => (zoneInsideAtEmit = zone.inside));
+    await fixture.whenStable();
+    await flush();
+    await fixture.whenStable();
+
+    zone.runOutsideAngular(() =>
+      handed.callbacks!.onSceneChange({ version: 1 } as unknown as ExcalidrawSceneChange),
+    );
+
     expect(zoneInsideAtEmit).toBe(true);
   });
 

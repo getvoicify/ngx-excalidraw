@@ -20,6 +20,7 @@ import type {
   ExcalidrawRendererCallbacks,
   ExcalidrawRendererFactory,
 } from './renderer';
+import type { ExcalidrawSceneChange } from './scene-change';
 
 interface FakeRendererHandle {
   factory: ExcalidrawRendererFactory;
@@ -245,6 +246,38 @@ describe('ExcalidrawComponent', () => {
     const api = { getSceneElements: () => [] } as unknown as ExcalidrawImperativeAPI;
     fake.created[0].callbacks.onApi(api);
     expect(emitted).toEqual([api]);
+  });
+
+  it('emits the scene changes the renderer reports through sceneChange', async () => {
+    configure();
+    const fixture = await mount();
+    const emitted: ExcalidrawSceneChange[] = [];
+    fixture.componentInstance.sceneChange.subscribe((change) => emitted.push(change));
+    const change = {
+      elements: [],
+      appState: {},
+      files: {},
+      version: 7,
+    } as unknown as ExcalidrawSceneChange;
+
+    fake.created[0].callbacks.onSceneChange(change);
+
+    expect(emitted).toEqual([change]);
+  });
+
+  it('emits no scene change the renderer reports after the component is destroyed', async () => {
+    configure();
+    const fixture = await mount();
+    const emitted: ExcalidrawSceneChange[] = [];
+    fixture.componentInstance.sceneChange.subscribe((change) => emitted.push(change));
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    fixture.destroy();
+
+    fake.created[0].callbacks.onSceneChange({ version: 1 } as unknown as ExcalidrawSceneChange);
+
+    expect(emitted).toEqual([]);
+    expect(warn).not.toHaveBeenCalled();
+    warn.mockRestore();
   });
 
   it('never creates the renderer when destroyed before the bundle finishes loading', async () => {

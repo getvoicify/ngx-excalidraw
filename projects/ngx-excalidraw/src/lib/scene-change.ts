@@ -1,0 +1,68 @@
+import type { ExcalidrawElement } from '@excalidraw/excalidraw/element/types';
+import type { AppState, BinaryFiles } from '@excalidraw/excalidraw/types';
+
+export interface ExcalidrawSceneChange {
+  elements: readonly ExcalidrawElement[];
+  appState: AppState;
+  files: BinaryFiles;
+  version: number;
+}
+
+export interface FrameScheduler {
+  request(callback: () => void): number;
+  cancel(handle: number): void;
+}
+
+type SceneChangeListener = (
+  elements: readonly ExcalidrawElement[],
+  appState: AppState,
+  files: BinaryFiles,
+) => void;
+
+export function animationFrames(view: Window): FrameScheduler {
+  return {
+    request: (callback) => view.requestAnimationFrame(callback),
+    cancel: (handle) => view.cancelAnimationFrame(handle),
+  };
+}
+
+export function coalesceSceneChanges({
+  frames,
+  sceneVersion,
+  emit,
+}: {
+  frames: FrameScheduler;
+  sceneVersion: (elements: readonly ExcalidrawElement[]) => number;
+  emit: (change: ExcalidrawSceneChange) => void;
+}): { onChange: SceneChangeListener; destroy(): void } {
+  let latest: Omit<ExcalidrawSceneChange, 'version'> | null = null;
+  let scheduled: number | null = null;
+  let emittedSignature: string | null = null;
+  let destroyed = false;
+
+  const flush = () => {
+    scheduled = null;
+    if (!latest) return;
+    const { elements, appState, files } = latest;
+    latest = null;
+    const version = sceneVersion(elements);
+    const signature = `${version}:${Object.keys(files).join(',')}`;
+    if (signature === emittedSignature) return;
+    emittedSignature = signature;
+    emit({ elements, appState, files, version });
+  };
+
+  return {
+    onChange: (elements, appState, files) => {
+      if (destroyed) return;
+      latest = { elements, appState, files };
+      scheduled ??= frames.request(flush);
+    },
+    destroy: () => {
+      destroyed = true;
+      latest = null;
+      if (scheduled !== null) frames.cancel(scheduled);
+      scheduled = null;
+    },
+  };
+}

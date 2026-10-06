@@ -1,16 +1,51 @@
 import * as react from 'react';
 import * as reactDomClient from 'react-dom/client';
-import type { ExcalidrawImperativeAPI, ExcalidrawProps } from '@excalidraw/excalidraw/types';
-import { commonJsExports, createRendererFactory } from './react-bridge';
+import type { ExcalidrawElement } from '@excalidraw/excalidraw/element/types';
+import type {
+  AppState,
+  BinaryFiles,
+  ExcalidrawImperativeAPI,
+  ExcalidrawProps,
+} from '@excalidraw/excalidraw/types';
+import {
+  commonJsExports,
+  createRendererFactory as createBridge,
+  type ReactBridgeModules,
+} from './react-bridge';
+import type { FrameScheduler } from './scene-change';
 
 const { act } = react;
 
 describe('React bridge', () => {
   let host: HTMLElement;
+  let frames: { scheduler: FrameScheduler; run(): void };
+  let hashElementsVersion: ReturnType<typeof vi.fn>;
+
+  function createRendererFactory(modules: Omit<ReactBridgeModules, 'hashElementsVersion'>) {
+    return createBridge(
+      { ...modules, hashElementsVersion: hashElementsVersion as never },
+      frames.scheduler,
+    );
+  }
+
+  function noSceneChanges() {
+    return { onSceneChange: vi.fn() };
+  }
 
   beforeEach(() => {
     (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
     host = document.body.appendChild(document.createElement('div'));
+    hashElementsVersion = vi.fn(() => 0);
+    const pending: (() => void)[] = [];
+    frames = {
+      scheduler: {
+        request: (callback) => pending.push(callback),
+        cancel: (handle) => {
+          pending[handle - 1] = () => undefined;
+        },
+      },
+      run: () => pending.splice(0).forEach((callback) => callback()),
+    };
   });
 
   afterEach(() => host.remove());
@@ -47,6 +82,7 @@ describe('React bridge', () => {
     const renderer = createRendererFactory({ react, reactDomClient, Excalidraw })(host, {
       onApi,
       onError: vi.fn(),
+      ...noSceneChanges(),
     });
 
     await act(async () => renderer.render({}));
@@ -63,6 +99,7 @@ describe('React bridge', () => {
     const renderer = createRendererFactory({ react, reactDomClient, Excalidraw })(host, {
       onApi,
       onError: vi.fn(),
+      ...noSceneChanges(),
     });
 
     await act(async () => renderer.render({}));
@@ -78,6 +115,7 @@ describe('React bridge', () => {
     const renderer = createRendererFactory({ react, reactDomClient, Excalidraw })(host, {
       onApi,
       onError: vi.fn(),
+      ...noSceneChanges(),
     });
 
     await act(async () => renderer.render({}));
@@ -104,6 +142,7 @@ describe('React bridge', () => {
       const renderer = createRendererFactory({ react, reactDomClient, Excalidraw })(host, {
         onApi: vi.fn(),
         onError,
+        ...noSceneChanges(),
       });
 
       await act(async () => renderer.render({})).then(
@@ -124,13 +163,16 @@ describe('React bridge', () => {
 
   it('lets a memoized Excalidraw skip re-renders whose props are unchanged in value', async () => {
     let renders = 0;
-    const Excalidraw = react.memo(({ children }: ExcalidrawProps) => {
+    const onChanges = new Set<ExcalidrawProps['onChange']>();
+    const Excalidraw = react.memo(({ children, onChange }: ExcalidrawProps) => {
       renders++;
+      onChanges.add(onChange);
       return react.createElement('div', { className: 'excalidraw' }, children);
     });
     const renderer = createRendererFactory({ react, reactDomClient, Excalidraw })(host, {
       onApi: vi.fn(),
       onError: vi.fn(),
+      ...noSceneChanges(),
     });
     await act(async () => renderer.render({ theme: 'light' }));
     const rendersAfterMount = renders;
@@ -140,7 +182,76 @@ describe('React bridge', () => {
 
     await act(async () => renderer.render({ theme: 'dark' }));
     expect(renders).toBe(rendersAfterMount + 1);
+    expect([...onChanges].map((onChange) => typeof onChange)).toEqual(['function']);
     await act(async () => renderer.destroy());
+  });
+
+  function excalidrawExposingOnChange() {
+    const seen: { onChange: NonNullable<ExcalidrawProps['onChange']>[] } = { onChange: [] };
+    const Excalidraw = ({ onChange, children }: ExcalidrawProps) => {
+      if (onChange) seen.onChange.push(onChange);
+      return react.createElement('div', { className: 'excalidraw' }, children);
+    };
+    const change = (elements: readonly ExcalidrawElement[], files = {} as BinaryFiles) =>
+      seen.onChange.at(-1)!(elements as never, { scrollX: 0 } as AppState, files);
+    return { seen, Excalidraw, change };
+  }
+
+  it('passes Excalidraw the same onChange across re-renders', async () => {
+    const { seen, Excalidraw } = excalidrawExposingOnChange();
+    const renderer = createRendererFactory({ react, reactDomClient, Excalidraw })(host, {
+      onApi: vi.fn(),
+      onError: vi.fn(),
+      ...noSceneChanges(),
+    });
+
+    await act(async () => renderer.render({ theme: 'light' }));
+    await act(async () => renderer.render({ theme: 'dark' }));
+
+    expect(seen.onChange).toHaveLength(2);
+    expect(new Set(seen.onChange).size).toBe(1);
+    await act(async () => renderer.destroy());
+  });
+
+  it("reports the frame's latest scene with the version from Excalidraw's hash helper", async () => {
+    const { Excalidraw, change } = excalidrawExposingOnChange();
+    const onSceneChange = vi.fn();
+    hashElementsVersion.mockReturnValue(42);
+    const renderer = createRendererFactory({ react, reactDomClient, Excalidraw })(host, {
+      onApi: vi.fn(),
+      onError: vi.fn(),
+      onSceneChange,
+    });
+    await act(async () => renderer.render({}));
+    const latest = [{ id: 'b' }] as unknown as ExcalidrawElement[];
+
+    change([{ id: 'a' }] as unknown as ExcalidrawElement[]);
+    change(latest);
+    expect(onSceneChange).not.toHaveBeenCalled();
+    frames.run();
+
+    expect(hashElementsVersion.mock.calls).toEqual([[latest]]);
+    expect(onSceneChange.mock.calls).toEqual([
+      [{ elements: latest, appState: { scrollX: 0 }, files: {}, version: 42 }],
+    ]);
+    await act(async () => renderer.destroy());
+  });
+
+  it('reports no scene change still pending when destroyed', async () => {
+    const { Excalidraw, change } = excalidrawExposingOnChange();
+    const onSceneChange = vi.fn();
+    const renderer = createRendererFactory({ react, reactDomClient, Excalidraw })(host, {
+      onApi: vi.fn(),
+      onError: vi.fn(),
+      onSceneChange,
+    });
+    await act(async () => renderer.render({}));
+
+    change([]);
+    await act(async () => renderer.destroy());
+    frames.run();
+
+    expect(onSceneChange).not.toHaveBeenCalled();
   });
 
   it('unmounts Excalidraw from the host on destroy', async () => {
@@ -148,6 +259,7 @@ describe('React bridge', () => {
     const renderer = createRendererFactory({ react, reactDomClient, Excalidraw })(host, {
       onApi: vi.fn(),
       onError: vi.fn(),
+      ...noSceneChanges(),
     });
     await act(async () => renderer.render({}));
     expect(host.querySelector('.excalidraw')).not.toBeNull();
