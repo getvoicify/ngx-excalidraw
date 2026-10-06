@@ -160,7 +160,7 @@ function assertPackage(packageDir) {
   }
 }
 
-const CONSUMER_APP = `import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
+const CONSUMER_APP = `import { ChangeDetectionStrategy, Component, signal, viewChild } from '@angular/core';
 import {
   ExcalidrawComponent,
   type ExcalidrawImperativeAPI,
@@ -174,6 +174,7 @@ import {
   styles: 'ngx-excalidraw { height: 80vh; }',
   template: \`
     <p>elements: {{ elementCount() }}</p>
+    <button type="button" [disabled]="!editor()?.scene()" (click)="exportSvg()">Export</button>
     <ngx-excalidraw
       theme="light"
       viewModeEnabled
@@ -191,13 +192,18 @@ export class App {
   protected readonly libraryCount = signal(0);
   protected readonly failed = signal(false);
   protected api?: ExcalidrawImperativeAPI;
+  protected readonly editor = viewChild(ExcalidrawComponent);
 
   protected onApi(api: ExcalidrawImperativeAPI): void {
     this.api = api;
   }
 
   protected onSceneChange(change: ExcalidrawSceneChange): void {
-    this.elementCount.set(change.elements.length);
+    this.elementCount.set(change.nonDeletedElements.length);
+  }
+
+  protected exportSvg(): Promise<SVGSVGElement> | undefined {
+    return this.editor()?.exportToSvg({ exportPadding: 8 });
   }
 }
 `;
