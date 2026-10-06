@@ -136,7 +136,7 @@ test('emits nothing while the pointer only hovers or pans the canvas', async ({ 
   await expect(page.getByTestId('scene-elements')).toHaveText('elements: 0');
 });
 
-test('delivers the last edit when the editor is removed before the next frame', async ({
+test('delivers the last edit when the editor is removed while no frame can run', async ({
   page,
 }) => {
   const centre = await canvasCentre(page);
@@ -151,6 +151,7 @@ test('delivers the last edit when the editor is removed before the next frame', 
   await page.evaluate(() => {
     const api = (window as unknown as DemoWindow).__excalidrawApi;
     const removeEditor = document.querySelector<HTMLButtonElement>('[data-testid=remove-editor]')!;
+    window.requestAnimationFrame = () => 0;
     const stopListening = api.onChange(() => {
       stopListening();
       queueMicrotask(() => removeEditor.click());
