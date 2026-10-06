@@ -1,4 +1,9 @@
-export { ExcalidrawComponent } from './lib/excalidraw.component';
+export {
+  ExcalidrawComponent,
+  type SceneBlobExportOptions,
+  type SceneJsonType,
+  type SceneSvgExportOptions,
+} from './lib/excalidraw.component';
 export { provideExcalidraw, type ExcalidrawConfig } from './lib/provide-excalidraw';
 export {
   EXCALIDRAW_RENDERER_LOADER,

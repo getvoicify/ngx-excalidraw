@@ -15,4 +15,21 @@ describe('public API', () => {
     expectTypeOf<NgxExcalidraw.NonDeletedExcalidrawElement>().toEqualTypeOf<ExcalidrawElementTypes.NonDeletedExcalidrawElement>();
     expectTypeOf<NgxExcalidraw.Theme>().toEqualTypeOf<ExcalidrawElementTypes.Theme>();
   });
+
+  it('types the scene action options as Excalidraw 0.18 export options minus the scene', () => {
+    expectTypeOf<NgxExcalidraw.SceneSvgExportOptions>().not.toBeAny();
+    expectTypeOf<NgxExcalidraw.SceneBlobExportOptions>().not.toBeAny();
+    expectTypeOf<keyof NgxExcalidraw.SceneSvgExportOptions>().toEqualTypeOf<
+      'exportPadding' | 'exportingFrame' | 'renderEmbeddables' | 'skipInliningFonts' | 'reuseImages'
+    >();
+    expectTypeOf<keyof NgxExcalidraw.SceneBlobExportOptions>().toEqualTypeOf<
+      | 'exportPadding'
+      | 'exportingFrame'
+      | 'maxWidthOrHeight'
+      | 'getDimensions'
+      | 'mimeType'
+      | 'quality'
+    >();
+    expectTypeOf<NgxExcalidraw.SceneJsonType>().toEqualTypeOf<'local' | 'database'>();
+  });
 });

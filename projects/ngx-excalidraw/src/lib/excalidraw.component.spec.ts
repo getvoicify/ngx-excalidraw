@@ -13,6 +13,7 @@ import type {
   ExcalidrawInitialDataState,
   LibraryItems,
 } from '@excalidraw/excalidraw/types';
+import { EXCALIDRAW_MODULE_LOADER, type ExcalidrawDataModule } from './excalidraw-data';
 import { ExcalidrawComponent } from './excalidraw.component';
 import { provideExcalidrawLibrary } from './library';
 import { provideExcalidraw } from './provide-excalidraw';
@@ -696,6 +697,88 @@ describe('ExcalidrawComponent', () => {
       expect(renderCalls().at(-1)).toStrictEqual([
         { viewModeEnabled: true, zenModeEnabled: false, gridModeEnabled: true },
       ]);
+    });
+  });
+
+  describe('scene actions', () => {
+    const elements = [{ id: 'rect', type: 'rectangle' }];
+    const appState = { viewBackgroundColor: '#ffc9c9' };
+    const files = { image: { id: 'image' } };
+    const editorApi = {
+      getSceneElements: () => elements,
+      getAppState: () => appState,
+      getFiles: () => files,
+    } as unknown as ExcalidrawImperativeAPI;
+    let excalidraw: Record<keyof ExcalidrawDataModule, ReturnType<typeof vi.fn>>;
+
+    beforeEach(() => {
+      excalidraw = {
+        exportToSvg: vi.fn(() => Promise.resolve('svg')),
+        exportToBlob: vi.fn(() => Promise.resolve('blob')),
+        serializeAsJSON: vi.fn(() => 'json'),
+        loadFromBlob: vi.fn(),
+        loadLibraryFromBlob: vi.fn(),
+      };
+      configure([
+        { provide: EXCALIDRAW_MODULE_LOADER, useValue: () => Promise.resolve(excalidraw) },
+      ]);
+    });
+
+    async function mountWithEditor() {
+      const fixture = await mount();
+      fake.created[0].callbacks.onApi(editorApi);
+      return fixture.componentInstance;
+    }
+
+    it("exports the editor's current scene as SVG with the given options", async () => {
+      const editor = await mountWithEditor();
+
+      await expect(editor.exportToSvg({ exportPadding: 8 })).resolves.toBe('svg');
+
+      expect(excalidraw.exportToSvg.mock.calls).toEqual([
+        [{ elements, appState, files, exportPadding: 8 }],
+      ]);
+    });
+
+    it("exports the editor's current scene as a blob with the given options", async () => {
+      const editor = await mountWithEditor();
+
+      await expect(editor.exportToBlob({ mimeType: 'image/jpeg' })).resolves.toBe('blob');
+
+      expect(excalidraw.exportToBlob.mock.calls).toEqual([
+        [{ elements, appState, files, mimeType: 'image/jpeg' }],
+      ]);
+    });
+
+    it("serializes the editor's current scene as a local file unless told otherwise", async () => {
+      const editor = await mountWithEditor();
+
+      await expect(editor.serializeAsJSON()).resolves.toBe('json');
+      await editor.serializeAsJSON('database');
+
+      expect(excalidraw.serializeAsJSON.mock.calls).toEqual([
+        [elements, appState, files, 'local'],
+        [elements, appState, files, 'database'],
+      ]);
+    });
+
+    it('rejects every action while no editor is mounted', async () => {
+      const editor = (await mount()).componentInstance;
+
+      await expect(editor.exportToSvg()).rejects.toThrow(/no editor is mounted/);
+      await expect(editor.exportToBlob()).rejects.toThrow(/no editor is mounted/);
+      await expect(editor.serializeAsJSON()).rejects.toThrow(/no editor is mounted/);
+      expect(excalidraw.exportToSvg).not.toHaveBeenCalled();
+    });
+
+    it('rejects once the editor has been torn down', async () => {
+      const fixture = await mount();
+      fake.created[0].callbacks.onApi(editorApi);
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      onTestFinished(() => warn.mockRestore());
+      fixture.destroy();
+
+      await expect(fixture.componentInstance.exportToSvg()).rejects.toThrow(/no editor is mounted/);
     });
   });
 

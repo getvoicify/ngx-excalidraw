@@ -19,11 +19,18 @@ import {
 } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import type {
+  ExcalidrawFrameLikeElement,
+  NonDeletedExcalidrawElement,
+} from '@excalidraw/excalidraw/element/types';
+import type {
+  AppState,
+  BinaryFiles,
   ExcalidrawImperativeAPI,
   ExcalidrawProps,
   LibraryItems,
 } from '@excalidraw/excalidraw/types';
 import { APP_FIRST_SETTLED } from './app-settled';
+import { ExcalidrawData } from './excalidraw-data';
 import { EXCALIDRAW_LIBRARY } from './library';
 import { LibraryOwnership } from './library-ownership';
 import { EXCALIDRAW_CONFIG, pointExcalidrawAtAssets } from './provide-excalidraw';
@@ -37,6 +44,29 @@ import type { ExcalidrawSceneChange } from './scene-change';
 import { guardMainMenuActions } from './main-menu-guard';
 import { once } from './once';
 import { loadStylesheetOnce } from './stylesheet';
+
+interface SceneExportOptions {
+  exportPadding?: number;
+  exportingFrame?: ExcalidrawFrameLikeElement | null;
+}
+
+export interface SceneSvgExportOptions extends SceneExportOptions {
+  renderEmbeddables?: boolean;
+  skipInliningFonts?: true;
+  reuseImages?: boolean;
+}
+
+export interface SceneBlobExportOptions extends SceneExportOptions {
+  maxWidthOrHeight?: number;
+  getDimensions?: (
+    width: number,
+    height: number,
+  ) => { width: number; height: number; scale?: number };
+  mimeType?: string;
+  quality?: number;
+}
+
+export type SceneJsonType = 'local' | 'database';
 
 @Component({
   selector: 'ngx-excalidraw',
@@ -99,6 +129,7 @@ export class ExcalidrawComponent implements OnDestroy {
   private readonly loadRenderer = inject(EXCALIDRAW_RENDERER_LOADER);
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
   private readonly appSettled = inject(APP_FIRST_SETTLED);
+  private readonly data = inject(ExcalidrawData);
   private readonly bundle = resource({
     params: () => (this.isBrowser && this.appSettled()) || undefined,
     loader: ({ abortSignal }) => this.loadBundle(abortSignal),
@@ -192,8 +223,38 @@ export class ExcalidrawComponent implements OnDestroy {
     });
   }
 
+  exportToSvg(options: SceneSvgExportOptions = {}): Promise<SVGSVGElement> {
+    return this.withCurrentScene((scene) => this.data.exportToSvg({ ...options, ...scene }));
+  }
+
+  exportToBlob(options: SceneBlobExportOptions = {}): Promise<Blob> {
+    return this.withCurrentScene((scene) => this.data.exportToBlob({ ...options, ...scene }));
+  }
+
+  serializeAsJSON(type: SceneJsonType = 'local'): Promise<string> {
+    return this.withCurrentScene(({ elements, appState, files }) =>
+      this.data.serializeAsJSON(elements, appState, files, type),
+    );
+  }
+
   ngOnDestroy(): void {
     untracked(this.editor)?.destroy();
+  }
+
+  private withCurrentScene<T>(
+    use: (scene: {
+      elements: readonly NonDeletedExcalidrawElement[];
+      appState: AppState;
+      files: BinaryFiles;
+    }) => Promise<T>,
+  ): Promise<T> {
+    const api = untracked(this.editorApi);
+    if (!api) return noEditor();
+    return use({
+      elements: api.getSceneElements(),
+      appState: api.getAppState(),
+      files: api.getFiles(),
+    });
   }
 
   private async loadBundle(abortSignal: AbortSignal): Promise<ExcalidrawRendererFactory> {
@@ -243,6 +304,10 @@ export class ExcalidrawComponent implements OnDestroy {
       }
     });
   }
+}
+
+function noEditor(): Promise<never> {
+  return Promise.reject(new Error('ngx-excalidraw: no editor is mounted'));
 }
 
 function definedOnly<T extends object>(props: { [K in keyof T]: T[K] | undefined }): Partial<T> {
