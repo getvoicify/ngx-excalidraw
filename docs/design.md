@@ -79,9 +79,17 @@ Angular 22+ wrapper around `@excalidraw/excalidraw` (React). Package name: `ngx-
   because Excalidraw's `useHandleLibrary` reads the URL and installs a global `hashchange` listener —
   apps that never asked for libraries must not get that. The bridge runs the hook beside the editor
   with the API as React state set by the probe (the hook's effect depends only on the API value).
-  Without `validateLibraryUrl` only libraries.excalidraw.com is allowed. An `#addLibrary=<url>`
-  import asks `window.confirm` unless its `token` equals the editor's `id`, then Excalidraw strips
-  `addLibrary` from the hash. `localStorageLibraryAdapter(key)` touches storage only inside
+  Without `validateLibraryUrl` Excalidraw's own default applies (kept, because the libraries site's
+  "Add to Excalidraw" relies on it): any `excalidraw.com` host or subdomain over http or https
+  (its hostname regex leaves dots unescaped) and anything under
+  `raw.githubusercontent.com/excalidraw/excalidraw-libraries/` on any branch. For self-hosted
+  libraries pass an exact-origin validator, e.g. `url => { try { return new URL(url).origin ===
+allowedOrigin } catch { return false } }`. An import comes from `#addLibrary=<url>` or the legacy
+  `?addLibrary=<url>` query, asks `window.confirm` unless the hash's `token` equals the editor's
+  `id`, then Excalidraw strips `addLibrary` with `history.replaceState({}, …)`; its `hashchange`
+  handler also calls `replaceState` and `stopImmediatePropagation` for `addLibrary` hashes. Both
+  drop `history.state`, so the Angular Router's navigation id and restored scroll position are
+  lost for that entry, and router listeners after Excalidraw's never see that `hashchange`. `localStorageLibraryAdapter(key)` touches storage only inside
   `load`/`save`; `load` yields nothing on missing, corrupt or unreadable data, while `save` rejects
   on failure as Excalidraw's adapter contract requires, so Excalidraw reports it. `libraryChange`
   emits every library update (including the adapter's initial load). `libraryReturnUrl` is
