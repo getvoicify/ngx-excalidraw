@@ -1,4 +1,4 @@
-import { Component, PLATFORM_ID, provideZonelessChangeDetection } from '@angular/core';
+import { Component, PLATFORM_ID, provideZonelessChangeDetection, Type } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import type { ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types';
 import { ExcalidrawComponent } from './excalidraw.component';
@@ -77,6 +77,14 @@ describe('ExcalidrawComponent', () => {
     return fixture;
   }
 
+  async function startLoading<T>(component: Type<T>): Promise<ComponentFixture<T>> {
+    const fixture = TestBed.createComponent(component);
+    TestBed.tick();
+    await flush();
+    TestBed.tick();
+    return fixture;
+  }
+
   beforeEach(() => {
     fake = fakeRenderer();
     loader = vi.fn(() => Promise.resolve(fake.factory));
@@ -131,7 +139,7 @@ describe('ExcalidrawComponent', () => {
     const pending = deferred<ExcalidrawRendererFactory>();
     loader.mockReturnValue(pending.promise);
     configure();
-    const fixture = await mount();
+    const fixture = await startLoading(ExcalidrawComponent);
     const host = fixture.nativeElement as HTMLElement;
     expect(host.querySelector('.ngx-excalidraw-placeholder')).not.toBeNull();
     pending.resolve(fake.factory);
@@ -154,7 +162,7 @@ describe('ExcalidrawComponent', () => {
     const pending = deferred<ExcalidrawRendererFactory>();
     loader.mockReturnValue(pending.promise);
     configure();
-    const fixture = await mount();
+    const fixture = await startLoading(ExcalidrawComponent);
     expect(loader).toHaveBeenCalledTimes(1);
     fixture.destroy();
     pending.resolve(fake.factory);
@@ -171,8 +179,7 @@ describe('ExcalidrawComponent', () => {
 
   it('injects the configured stylesheet once for several instances and mounts after it loads', async () => {
     configure([provideExcalidraw({ styleUrl: 'excalidraw.css' })]);
-    const fixture = TestBed.createComponent(TwoInstancesHost);
-    await fixture.whenStable();
+    const fixture = await startLoading(TwoInstancesHost);
     const links = document.head.querySelectorAll<HTMLLinkElement>(
       'link[rel="stylesheet"][href="excalidraw.css"]',
     );
@@ -180,15 +187,26 @@ describe('ExcalidrawComponent', () => {
     expect(fake.created).toHaveLength(0);
     links[0].dispatchEvent(new Event('load'));
     await flush();
+    await fixture.whenStable();
     expect(fake.created).toHaveLength(2);
+  });
+
+  it('skips the bundle import when destroyed while the stylesheet is loading', async () => {
+    configure([provideExcalidraw({ styleUrl: 'slow.css' })]);
+    const fixture = await startLoading(ExcalidrawComponent);
+    fixture.destroy();
+    document.head.querySelector('link[href="slow.css"]')!.dispatchEvent(new Event('load'));
+    await flush();
+    expect(loader).not.toHaveBeenCalled();
   });
 
   it('still mounts when the configured stylesheet fails to load', async () => {
     configure([provideExcalidraw({ styleUrl: 'missing.css' })]);
-    TestBed.createComponent(ExcalidrawComponent);
+    const fixture = TestBed.createComponent(ExcalidrawComponent);
     await flush();
     document.head.querySelector('link[href="missing.css"]')!.dispatchEvent(new Event('error'));
     await flush();
+    await fixture.whenStable();
     expect(fake.created).toHaveLength(1);
   });
 
