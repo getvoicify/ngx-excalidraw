@@ -113,7 +113,13 @@ allowedOrigin } catch { return false } }`. An import comes from `#addLibrary=<ur
 - **Workspace resolution**: `ngx-excalidraw` maps to the library _source_ in `tsconfig` paths; the
   packaged artifact is verified by the install test.
 - **Tests (local, non-negotiable)**: Vitest (`@angular/build:unit-test`), Playwright e2e against the
-  built SSR demo (never reusing an existing server), plus the pack-and-install script.
+  built SSR demo (never reusing an existing server), plus `npm run test:install`: it packs the
+  production build, asserts the tarball (peer ranges, `sideEffects`, types, no tests, react-bridge
+  a separate chunk importing react/excalidraw dynamically), installs it with its peers into a fresh
+  `ng new --ssr --zoneless` Angular 22 app with strict templates, builds it, and asserts the
+  server-rendered `/` shows only the placeholder and that Excalidraw code is in a lazy chunk, never
+  in the initial JS. npm installs it without `--force`; with React 19 it only warns (ERESOLVE
+  overriding) about the `react ^16.8 || ^17 || ^18` peers of Excalidraw 0.18's nested Radix packages.
 
 ## Slice plan (one branch each, merged to main in order)
 
