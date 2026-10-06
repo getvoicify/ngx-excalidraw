@@ -118,6 +118,7 @@ export class ExcalidrawComponent implements OnDestroy {
 
   private readonly latestScene = signal<ExcalidrawSceneChange | undefined>(undefined);
   readonly scene = this.latestScene.asReadonly();
+  readonly ready = computed(() => this.editorApi() !== null);
 
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
   private readonly dom = inject(Renderer2);

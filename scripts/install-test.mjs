@@ -174,7 +174,7 @@ import {
   styles: 'ngx-excalidraw { height: 80vh; }',
   template: \`
     <p>elements: {{ elementCount() }}</p>
-    <button type="button" [disabled]="!editor()?.scene()" (click)="exportSvg()">Export</button>
+    <button type="button" [disabled]="!editor()?.ready()" (click)="exportSvg()">Export</button>
     <ngx-excalidraw
       theme="light"
       viewModeEnabled

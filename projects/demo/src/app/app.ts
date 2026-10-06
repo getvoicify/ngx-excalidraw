@@ -87,7 +87,7 @@ export class App {
   protected readonly exportedSvgUrl = signal<string | undefined>(undefined);
   protected readonly theme = computed(() => (this.dark() ? 'dark' : 'light'));
   private readonly editor = viewChild(ExcalidrawComponent);
-  protected readonly ready = computed(() => this.editor()?.scene() !== undefined);
+  protected readonly ready = computed(() => this.editor()?.ready() ?? false);
 
   protected async exportSvg(): Promise<void> {
     const svg = await this.editor()!.exportToSvg();

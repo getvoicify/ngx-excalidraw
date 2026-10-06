@@ -108,7 +108,7 @@ import { ExcalidrawComponent, type ExcalidrawSceneChange } from 'ngx-excalidraw'
   `,
   template: `
     <p>{{ elementCount() }} elements</p>
-    <button type="button" [disabled]="!editor()?.scene()" (click)="save()">Save</button>
+    <button type="button" [disabled]="!editor()?.ready()" (click)="save()">Save</button>
     <ngx-excalidraw
       [theme]="dark() ? 'dark' : 'light'"
       (sceneChange)="onSceneChange($event)"
@@ -229,6 +229,7 @@ state and act on its scene.
 
 | Member                   | Returns                              | Does                                                                           |
 | ------------------------ | ------------------------------------ | ------------------------------------------------------------------------------ |
+| `ready()`                | `boolean`                            | `true` from the moment `api` emits until the editor is torn down               |
 | `scene()`                | `ExcalidrawSceneChange \| undefined` | the latest `sceneChange` payload; `undefined` while no editor has reported one |
 | `exportToSvg(options?)`  | `Promise<SVGSVGElement>`             | exports the editor's current scene                                             |
 | `exportToBlob(options?)` | `Promise<Blob>`                      | exports the editor's current scene as an image                                 |
@@ -237,9 +238,8 @@ state and act on its scene.
 The actions read the elements, appState and files from the mounted editor and pass them to
 `ExcalidrawData`. Their options are Excalidraw 0.18's export options without `elements`,
 `appState` and `files` (`SceneSvgExportOptions`, `SceneBlobExportOptions`). They reject while no
-editor is mounted (before it mounts, on the server, and after a failure or destroy). The first
-scene is reported right after the editor mounts and `scene()` returns to `undefined` when the editor
-is torn down, so a defined `scene()` also means the actions can run.
+editor is mounted (before it mounts, on the server, and after a failure or destroy); `ready()`
+tells you when they can run. `scene()` also returns to `undefined` when the editor is torn down.
 
 To show an export, bind a data URL to an `<img>`. Angular 22's URL sanitizer passes `data:` and
 `blob:` URLs (it only blocks `javascript:`):

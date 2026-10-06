@@ -330,6 +330,49 @@ describe('ExcalidrawComponent', () => {
     expect(emitted).toEqual([change]);
   });
 
+  describe('ready', () => {
+    const handedOverApi = { getAppState: () => ({}) } as unknown as ExcalidrawImperativeAPI;
+
+    it('is false while the editor has mounted but not handed over its API', async () => {
+      configure();
+      const fixture = await mount();
+
+      expect(fixture.componentInstance.ready()).toBe(false);
+    });
+
+    it('is true once the editor has handed over its API', async () => {
+      configure();
+      const fixture = await mount();
+
+      fake.created[0].callbacks.onApi(handedOverApi);
+
+      expect(fixture.componentInstance.ready()).toBe(true);
+    });
+
+    it('is false again once the component is destroyed', async () => {
+      configure();
+      const fixture = await mount();
+      fake.created[0].callbacks.onApi(handedOverApi);
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      onTestFinished(() => warn.mockRestore());
+
+      fixture.destroy();
+
+      expect(fixture.componentInstance.ready()).toBe(false);
+    });
+
+    it('is false again once a crashed editor has been torn down', async () => {
+      configure();
+      const fixture = await mount();
+      fake.created[0].callbacks.onApi(handedOverApi);
+
+      fake.created[0].callbacks.onError(new Error('Excalidraw crashed'));
+      await fixture.whenStable();
+
+      expect(fixture.componentInstance.ready()).toBe(false);
+    });
+  });
+
   it('holds no scene until the renderer reports the first one', async () => {
     configure();
     const fixture = await mount();

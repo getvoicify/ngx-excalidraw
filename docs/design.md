@@ -163,7 +163,10 @@ Angular 22+ wrapper around `@excalidraw/excalidraw` (React). Package name: `ngx-
     `NonDeletedExcalidrawElement` / `getNonDeletedElements`; `visibleElements` was rejected because
     Excalidraw's renderer uses "visible" for elements inside the viewport.
   - `scene` (read-only signal): the latest emitted change, `undefined` until the first and again
-    once the editor is torn down, so a defined `scene()` means a mounted editor.
+    once the editor is torn down.
+  - `ready` (computed from the handed-over API): true from the moment `api` emits until teardown or
+    failure. Readiness is not inferred from `scene()`, which would rely on Excalidraw firing
+    `onChange` on mount.
   - `exportToSvg` / `exportToBlob` / `serializeAsJSON` on the component read the mounted editor's
     elements (`getSceneElements`, non-deleted; `serializeAsJSON` drops deleted ones itself in both
     `local` and `database` modes), appState and files and delegate to `ExcalidrawData`; they reject
