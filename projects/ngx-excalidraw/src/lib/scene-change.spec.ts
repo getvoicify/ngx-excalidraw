@@ -25,7 +25,8 @@ function fakeFrames() {
 
 const element = (id: string, versionNonce: number) =>
   ({ id, versionNonce }) as unknown as ExcalidrawElement;
-const appState = (scrollX: number) => ({ scrollX }) as unknown as AppState;
+const appState = (scrollX: number, settings: Partial<AppState> = {}) =>
+  ({ scrollX, ...settings }) as unknown as AppState;
 const noFiles = {} as BinaryFiles;
 const sumOfNonces = (elements: readonly ExcalidrawElement[]) =>
   elements.reduce((sum, { versionNonce }) => sum + versionNonce, 0);
@@ -84,6 +85,40 @@ describe('coalesceSceneChanges', () => {
 
     expect(emit).toHaveBeenCalledTimes(2);
     expect(emit.mock.lastCall?.[0].files).toBe(files);
+  });
+
+  it.each<[string, Partial<AppState>]>([
+    ['viewBackgroundColor', { viewBackgroundColor: '#ffc9c9' }],
+    ['gridModeEnabled', { gridModeEnabled: true }],
+    ['gridSize', { gridSize: 40 }],
+    ['gridStep', { gridStep: 10 }],
+  ])('emits again when only the persisted canvas setting %s changes', (_key, changed) => {
+    const { scene, emit, runFrame } = setUp();
+    scene.onChange([element('a', 1)], appState(0), noFiles);
+    runFrame();
+
+    scene.onChange([element('a', 1)], appState(0, changed), noFiles);
+    runFrame();
+
+    expect(emit).toHaveBeenCalledTimes(2);
+  });
+
+  it('emits nothing when only view state such as zoom or selection changes', () => {
+    const { scene, emit, runFrame } = setUp();
+    scene.onChange([element('a', 1)], appState(0), noFiles);
+    runFrame();
+
+    scene.onChange(
+      [element('a', 1)],
+      appState(0, {
+        zoom: { value: 2 },
+        selectedElementIds: { a: true },
+      } as unknown as Partial<AppState>),
+      noFiles,
+    );
+    runFrame();
+
+    expect(emit).toHaveBeenCalledTimes(1);
   });
 
   it('emits the first scene it sees', () => {

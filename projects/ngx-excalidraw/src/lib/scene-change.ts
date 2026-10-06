@@ -19,6 +19,13 @@ type SceneChangeListener = (
   files: BinaryFiles,
 ) => void;
 
+const persistedCanvasSettings = [
+  'viewBackgroundColor',
+  'gridModeEnabled',
+  'gridSize',
+  'gridStep',
+] as const satisfies readonly (keyof AppState)[];
+
 export function animationFrames(view: Window): FrameScheduler {
   return {
     request: (callback) => view.requestAnimationFrame(callback),
@@ -46,7 +53,11 @@ export function coalesceSceneChanges({
     const { elements, appState, files } = latest;
     latest = null;
     const version = sceneVersion(elements);
-    const signature = `${version}:${Object.keys(files).join(',')}`;
+    const signature = JSON.stringify([
+      version,
+      Object.keys(files),
+      persistedCanvasSettings.map((key) => appState[key]),
+    ]);
     if (signature === emittedSignature) return;
     emittedSignature = signature;
     emit({ elements, appState, files, version });

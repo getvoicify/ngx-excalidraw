@@ -12,7 +12,10 @@ type DemoWindow = Window & {
   __framesSeen?: number;
   __excalidrawApi: {
     getSceneElements(): SceneElement[];
-    updateScene(scene: { elements: SceneElement[] }): void;
+    updateScene(scene: {
+      elements?: SceneElement[];
+      appState?: { viewBackgroundColor?: string };
+    }): void;
     onChange(callback: () => void): () => void;
   };
 };
@@ -164,4 +167,17 @@ test('delivers the last edit when the editor is removed before the next frame', 
 
   await expect(page.locator('ngx-excalidraw')).toHaveCount(0);
   await expect(page.getByTestId('scene-elements')).toHaveText('elements: 0');
+});
+
+test('emits once when only the canvas background changes', async ({ page }) => {
+  const before = await sceneChangeEmissions(page);
+
+  await page.evaluate(() =>
+    (window as unknown as DemoWindow).__excalidrawApi.updateScene({
+      appState: { viewBackgroundColor: '#ffc9c9' },
+    }),
+  );
+  await nextFrames(page);
+
+  expect((await sceneChangeEmissions(page)) - before).toBe(1);
 });
