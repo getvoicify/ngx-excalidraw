@@ -5,6 +5,7 @@ import {
   provideZonelessChangeDetection,
   signal,
   Type,
+  WritableSignal,
 } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import type {
@@ -87,10 +88,28 @@ class AttributeBooleansHost {}
 
 @Component({
   imports: [ExcalidrawComponent],
-  template: `<ngx-excalidraw [detectScroll]="detectScroll()" />`,
+  template: `<ngx-excalidraw [viewModeEnabled]="viewModeEnabled()" />`,
 })
 class OptionalBooleanHost {
-  readonly detectScroll = signal<boolean | undefined>(true);
+  readonly viewModeEnabled = signal<boolean | undefined>(true);
+}
+
+@Component({
+  imports: [ExcalidrawComponent],
+  template: `<ngx-excalidraw
+    [handleKeyboardGlobally]="handleKeyboardGlobally()"
+    [objectsSnapModeEnabled]="objectsSnapModeEnabled()"
+    [name]="name()"
+    [autoFocus]="autoFocus()"
+    [detectScroll]="detectScroll()"
+  />`,
+})
+class MountOnlyInputsHost {
+  readonly handleKeyboardGlobally = signal(false);
+  readonly objectsSnapModeEnabled = signal(false);
+  readonly name = signal('first');
+  readonly autoFocus = signal(false);
+  readonly detectScroll = signal(false);
 }
 
 describe('ExcalidrawComponent', () => {
@@ -394,13 +413,34 @@ describe('ExcalidrawComponent', () => {
       expect(renderCalls()).toHaveLength(rendersAfterMount + 1);
     });
 
+    it.each([
+      ['handleKeyboardGlobally', true],
+      ['objectsSnapModeEnabled', true],
+      ['name', 'renamed'],
+      ['autoFocus', true],
+      ['detectScroll', true],
+    ] as const)(
+      'never re-renders for a %s change, since Excalidraw reads it only at mount',
+      async (input, changed) => {
+        configure();
+        const fixture = await startLoading(MountOnlyInputsHost);
+        await fixture.whenStable();
+        const rendersAfterMount = renderCalls().length;
+
+        (fixture.componentInstance[input] as WritableSignal<unknown>).set(changed);
+        await fixture.whenStable();
+
+        expect(renderCalls()).toHaveLength(rendersAfterMount);
+      },
+    );
+
     it("falls back to Excalidraw's default when a boolean input is bound to undefined", async () => {
       configure();
       const fixture = await startLoading(OptionalBooleanHost);
       await fixture.whenStable();
-      expect(renderCalls().at(-1)).toStrictEqual([{ detectScroll: true }]);
+      expect(renderCalls().at(-1)).toStrictEqual([{ viewModeEnabled: true }]);
 
-      fixture.componentInstance.detectScroll.set(undefined);
+      fixture.componentInstance.viewModeEnabled.set(undefined);
       await fixture.whenStable();
 
       expect(renderCalls().at(-1)).toStrictEqual([{}]);

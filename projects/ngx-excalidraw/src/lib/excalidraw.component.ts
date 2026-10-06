@@ -93,10 +93,15 @@ export class ExcalidrawComponent {
       viewModeEnabled: this.viewModeEnabled(),
       zenModeEnabled: this.zenModeEnabled(),
       gridModeEnabled: this.gridModeEnabled(),
-      objectsSnapModeEnabled: this.objectsSnapModeEnabled(),
       langCode: this.langCode(),
-      name: this.name(),
       UIOptions: this.UIOptions(),
+    }),
+  );
+  private readonly mountOnlyProps = computed(() =>
+    definedOnly<ExcalidrawRenderProps>({
+      initialData: this.initialData(),
+      objectsSnapModeEnabled: this.objectsSnapModeEnabled(),
+      name: this.name(),
       autoFocus: this.autoFocus(),
       handleKeyboardGlobally: this.handleKeyboardGlobally(),
       detectScroll: this.detectScroll(),
@@ -124,10 +129,7 @@ export class ExcalidrawComponent {
     effect(() => {
       const editor = this.editor();
       if (!editor) return;
-      const props = {
-        ...this.renderProps(),
-        ...definedOnly<ExcalidrawRenderProps>({ initialData: untracked(this.initialData) }),
-      };
+      const props = { ...this.renderProps(), ...untracked(this.mountOnlyProps) };
       this.zone.runOutsideAngular(() => editor.render(props));
     });
 
