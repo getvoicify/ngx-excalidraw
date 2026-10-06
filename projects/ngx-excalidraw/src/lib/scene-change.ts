@@ -1,8 +1,12 @@
-import type { ExcalidrawElement } from '@excalidraw/excalidraw/element/types';
+import type {
+  ExcalidrawElement,
+  NonDeletedExcalidrawElement,
+} from '@excalidraw/excalidraw/element/types';
 import type { AppState, BinaryFiles } from '@excalidraw/excalidraw/types';
 
 export interface ExcalidrawSceneChange {
   elements: readonly ExcalidrawElement[];
+  nonDeletedElements: readonly NonDeletedExcalidrawElement[];
   appState: AppState;
   files: BinaryFiles;
   version: number;
@@ -67,7 +71,7 @@ export function coalesceSceneChanges({
   sceneVersion: (elements: readonly ExcalidrawElement[]) => number;
   emit: (change: ExcalidrawSceneChange) => void;
 }): { onChange: SceneChangeListener; destroy(): void } {
-  let latest: Omit<ExcalidrawSceneChange, 'version'> | null = null;
+  let latest: Pick<ExcalidrawSceneChange, 'elements' | 'appState' | 'files'> | null = null;
   let scheduled: number | null = null;
   let emittedSignature: string | null = null;
   let destroyed = false;
@@ -85,7 +89,13 @@ export function coalesceSceneChanges({
     ]);
     if (signature === emittedSignature) return;
     emittedSignature = signature;
-    emit({ elements: [...elements], appState, files, version });
+    emit({
+      elements: [...elements],
+      nonDeletedElements: elements.filter(isNonDeleted),
+      appState,
+      files,
+      version,
+    });
   };
 
   const flushNow = () => {
@@ -106,4 +116,8 @@ export function coalesceSceneChanges({
       flushNow();
     },
   };
+}
+
+function isNonDeleted(element: ExcalidrawElement): element is NonDeletedExcalidrawElement {
+  return !element.isDeleted;
 }

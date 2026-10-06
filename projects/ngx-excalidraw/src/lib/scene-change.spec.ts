@@ -76,8 +76,29 @@ describe('coalesceSceneChanges', () => {
     runFrame();
 
     expect(emit.mock.calls).toEqual([
-      [{ elements: latest, appState: appState(5), files: noFiles, version: 3 }],
+      [
+        {
+          elements: latest,
+          nonDeletedElements: latest,
+          appState: appState(5),
+          files: noFiles,
+          version: 3,
+        },
+      ],
     ]);
+  });
+
+  it('reports the elements left after deletions apart from the tombstones it keeps in elements', () => {
+    const { scene, emit, runFrame } = setUp();
+    const kept = element('kept', 1);
+    const deleted = { ...element('deleted', 2), isDeleted: true } as ExcalidrawElement;
+
+    scene.onChange([kept, deleted], appState(0), noFiles);
+    runFrame();
+
+    const [{ elements, nonDeletedElements }] = emit.mock.lastCall!;
+    expect(elements).toEqual([kept, deleted]);
+    expect(nonDeletedElements).toEqual([kept]);
   });
 
   it('requests a single frame however many changes arrive before it runs', () => {
@@ -179,7 +200,15 @@ describe('coalesceSceneChanges', () => {
 
     scene.destroy();
     expect(emit.mock.calls).toEqual([
-      [{ elements: last, appState: appState(0), files: noFiles, version: 1 }],
+      [
+        {
+          elements: last,
+          nonDeletedElements: last,
+          appState: appState(0),
+          files: noFiles,
+          version: 1,
+        },
+      ],
     ]);
     expect(pendingCount()).toBe(0);
 

@@ -251,7 +251,15 @@ describe('React bridge', () => {
 
     expect(hashElementsVersion.mock.calls).toEqual([[latest]]);
     expect(onSceneChange.mock.calls).toEqual([
-      [{ elements: latest, appState: { scrollX: 0 }, files: {}, version: 42 }],
+      [
+        {
+          elements: latest,
+          nonDeletedElements: latest,
+          appState: { scrollX: 0 },
+          files: {},
+          version: 42,
+        },
+      ],
     ]);
     await act(async () => renderer.destroy());
   });
