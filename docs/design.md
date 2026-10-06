@@ -153,6 +153,34 @@ Angular 22+ wrapper around `@excalidraw/excalidraw` (React). Package name: `ngx-
   root `assetPath` set before any export runs) — the same module the bridge imports, so the bundler
   emits one chunk (e2e-locked). Each method takes Excalidraw's own parameter list and forwards it
   verbatim. On the server every call rejects without importing.
+- **Consumer API** (owner directive: the demo, a real consumer, imports only `ngx-excalidraw`,
+  Angular and rxjs; `scripts/demo-public-api.test.mjs` enforces it on `projects/demo/src/app` by
+  parsing imports and `window.__*` accesses):
+  - the Excalidraw types consumers handle are re-exported type-only (no runtime import; the
+    install test's fesm import scan stays the guard).
+  - `ExcalidrawSceneChange.nonDeletedElements` beside `elements`: `elements` keeps tombstones because
+    persistence and collaboration reconcile on them. Named after Excalidraw's own
+    `NonDeletedExcalidrawElement` / `getNonDeletedElements`; `visibleElements` was rejected because
+    Excalidraw's renderer uses "visible" for elements inside the viewport.
+  - `scene` (read-only signal): the latest emitted change, `undefined` until the first and again
+    once the editor is torn down, so a defined `scene()` means a mounted editor.
+  - `exportToSvg` / `exportToBlob` / `serializeAsJSON` on the component read the mounted editor's
+    elements (`getSceneElements`, non-deleted; `serializeAsJSON` drops deleted ones itself in both
+    `local` and `database` modes), appState and files and delegate to `ExcalidrawData`; they reject
+    while no editor is mounted. Their option types are hand-written from 0.18's
+    `utils/export.d.ts`, because 0.18 re-exports its export functions from `@excalidraw/utils/export`,
+    which does not resolve for consumers, so `typeof import('@excalidraw/excalidraw').exportToSvg`
+    is `any` (this also makes `ExcalidrawData`'s export signatures and `ExportToSvgOptions` /
+    `ExportToBlobOptions` `any`).
+  - `api` stays as the escape hatch for imperative calls the wrapper does not cover.
+  - export preview: a `data:image/svg+xml` URL on `<img [src]>`; Angular 22's URL sanitizer
+    (`SAFE_URL_PATTERN`) blocks only `javascript:`, and a data URL needs no revocation. Kept in the
+    demo, not the library: it is one line of plain Angular.
+  - e2e instrumentation lives in the demo's `e2e` build configuration (`src/e2e/main.e2e.ts`, output
+    `dist/demo-e2e`, used by Playwright's web server), which decorates the public
+    `loadDefaultExcalidrawRenderer` through `EXCALIDRAW_RENDERER_LOADER` to expose the API and count
+    hand-overs and scene changes. The counts are taken at the renderer callbacks, one step before the
+    outputs; the outputs themselves are covered by the DOM the demo renders from them.
 - **Workspace resolution**: `ngx-excalidraw` maps to the library _source_ in `tsconfig` paths; the
   packaged artifact is verified by the install test.
 - **Tests (local, non-negotiable)**: Vitest (`@angular/build:unit-test`), Playwright e2e against the

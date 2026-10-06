@@ -95,8 +95,7 @@ the editor mounts. That covers the server render, the bundle download, and the c
 editor fails.
 
 ```ts
-import { Component, signal } from '@angular/core';
-import type { ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types';
+import { Component, computed, signal, viewChild } from '@angular/core';
 import { ExcalidrawComponent, type ExcalidrawSceneChange } from 'ngx-excalidraw';
 
 @Component({
@@ -108,10 +107,10 @@ import { ExcalidrawComponent, type ExcalidrawSceneChange } from 'ngx-excalidraw'
     }
   `,
   template: `
+    <p>{{ elementCount() }} elements</p>
+    <button type="button" [disabled]="!editor()?.scene()" (click)="save()">Save</button>
     <ngx-excalidraw
       [theme]="dark() ? 'dark' : 'light'"
-      viewModeEnabled
-      (api)="api.set($event)"
       (sceneChange)="onSceneChange($event)"
       (editorError)="onEditorError($event)"
     >
@@ -121,10 +120,18 @@ import { ExcalidrawComponent, type ExcalidrawSceneChange } from 'ngx-excalidraw'
 })
 export class Whiteboard {
   protected readonly dark = signal(false);
-  protected readonly api = signal<ExcalidrawImperativeAPI | undefined>(undefined);
+  protected readonly editor = viewChild(ExcalidrawComponent);
+  protected readonly elementCount = computed(
+    () => this.editor()?.scene()?.nonDeletedElements.length ?? 0,
+  );
 
-  protected onSceneChange({ elements }: ExcalidrawSceneChange): void {
-    console.log(`${elements.length} elements`);
+  protected onSceneChange({ version }: ExcalidrawSceneChange): void {
+    console.log(`scene version ${version}`);
+  }
+
+  protected async save(): Promise<void> {
+    const json = await this.editor()!.serializeAsJSON();
+    localStorage.setItem('whiteboard', json);
   }
 
   protected onEditorError(error: unknown): void {
@@ -132,6 +139,11 @@ export class Whiteboard {
   }
 }
 ```
+
+The package re-exports the Excalidraw 0.18 types you need as `export type`, so an app imports
+nothing from `@excalidraw/*`: `ExcalidrawImperativeAPI`, `ExcalidrawProps`, `AppState`,
+`BinaryFiles`, `LibraryItems`, `ExcalidrawInitialDataState`, `UIOptions`, `ExcalidrawElement`,
+`NonDeletedExcalidrawElement` and `Theme`. They are type-only and add nothing to your bundle.
 
 ### Inputs
 
@@ -180,19 +192,22 @@ While it is `false`:
   embedded scene) onto the editor does nothing. Plain images are still inserted.
 
 The host carries the `ngx-excalidraw--no-main-menu` class, which is in the server-rendered HTML, so
-the button never appears before hydration. Your own code can still use the API, for example
-`api.updateScene({ appState: { openMenu: 'canvas' } })`.
+the button never appears before hydration. Your own code can still use the `api` escape hatch, for
+example `api.updateScene({ appState: { openMenu: 'canvas' } })`.
 
 ### Outputs
 
 | Output          | Payload                   | Emits                                                         |
 | --------------- | ------------------------- | ------------------------------------------------------------- |
-| `api`           | `ExcalidrawImperativeAPI` | once the editor has mounted                                   |
+| `api`           | `ExcalidrawImperativeAPI` | once the editor has mounted (the escape hatch, see below)     |
 | `sceneChange`   | `ExcalidrawSceneChange`   | when the scene changes, at most once per animation frame      |
 | `libraryChange` | `LibraryItems`            | on every library update, including the adapter's initial load |
 | `editorError`   | `unknown`                 | when loading, mounting, or a crash inside Excalidraw fails    |
 
-The `sceneChange` payload is `{ elements, appState, files, version }`.
+The `sceneChange` payload is `{ elements, nonDeletedElements, appState, files, version }`.
+`elements` includes deleted elements (Excalidraw keeps them as tombstones with `isDeleted: true`,
+which persistence and collaboration need to reconcile versions); `nonDeletedElements` is the same
+list without them, which is what the canvas shows and what most counts and exports want.
 
 - **It only fires for real edits.** Hover, pan, zoom and selection never emit. Changes are
   coalesced per frame and compared on element versions, file ids, and the appState keys Excalidraw
@@ -206,6 +221,41 @@ The `sceneChange` payload is `{ elements, appState, files, version }`.
 
 When `editorError` emits, the editor is torn down and the placeholder returns. A failed bundle load
 is retried by the next editor that mounts.
+
+### Scene and actions
+
+Get the component with `viewChild(ExcalidrawComponent)` (or a template reference) to read its
+state and act on its scene.
+
+| Member                   | Returns                              | Does                                                                           |
+| ------------------------ | ------------------------------------ | ------------------------------------------------------------------------------ |
+| `scene()`                | `ExcalidrawSceneChange \| undefined` | the latest `sceneChange` payload; `undefined` while no editor has reported one |
+| `exportToSvg(options?)`  | `Promise<SVGSVGElement>`             | exports the editor's current scene                                             |
+| `exportToBlob(options?)` | `Promise<Blob>`                      | exports the editor's current scene as an image                                 |
+| `serializeAsJSON(type?)` | `Promise<string>`                    | serializes the current scene, `'local'` (default) or `'database'`              |
+
+The actions read the elements, appState and files from the mounted editor and pass them to
+`ExcalidrawData`. Their options are Excalidraw 0.18's export options without `elements`,
+`appState` and `files` (`SceneSvgExportOptions`, `SceneBlobExportOptions`). They reject while no
+editor is mounted (before it mounts, on the server, and after a failure or destroy). The first
+scene is reported right after the editor mounts and `scene()` returns to `undefined` when the editor
+is torn down, so a defined `scene()` also means the actions can run.
+
+To show an export, bind a data URL to an `<img>`. Angular 22's URL sanitizer passes `data:` and
+`blob:` URLs (it only blocks `javascript:`):
+
+```ts
+const svg = await this.editor()!.exportToSvg();
+this.preview.set(
+  `data:image/svg+xml;charset=utf-8,${encodeURIComponent(new XMLSerializer().serializeToString(svg))}`,
+);
+```
+
+### The `api` escape hatch
+
+`(api)` hands over Excalidraw's own `ExcalidrawImperativeAPI` for what the component does not
+cover, such as `updateScene`, `updateLibrary` or `scrollToContent`. Calls on it bypass the
+wrapper, so prefer the inputs, `scene()` and the actions above where they fit.
 
 ## Libraries
 
@@ -298,15 +348,15 @@ export const appConfig: ApplicationConfig = {
 signatures. Every method returns a promise.
 
 The methods are `exportToSvg`, `exportToBlob`, `serializeAsJSON`, `loadFromBlob`, and
-`loadLibraryFromBlob`.
+`loadLibraryFromBlob`. To export what an editor shows, the component's own actions are simpler;
+use the service for scenes you hold yourself, or to load files.
 
 It imports `@excalidraw/excalidraw` on first call. This is the same chunk the editor uses, so it is
 only downloaded once. On the server, every call rejects.
 
 ```ts
 import { inject, Injectable } from '@angular/core';
-import type { ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types';
-import { ExcalidrawData } from 'ngx-excalidraw';
+import { ExcalidrawData, type ExcalidrawImperativeAPI } from 'ngx-excalidraw';
 
 @Injectable({ providedIn: 'root' })
 export class WhiteboardFiles {
