@@ -12,7 +12,7 @@ settles.
 - `rxjs` `^7.4.0`
 
 ```sh
-npm install ngx-excalidraw @excalidraw/excalidraw react react-dom
+npm install @getvoicify/ngx-excalidraw @excalidraw/excalidraw react react-dom
 ```
 
 Excalidraw 0.18's published `.d.ts` files import `@excalidraw/math` and `@excalidraw/utils`, which
@@ -46,7 +46,7 @@ before the first editor mounts:
 
 ```ts
 import { ApplicationConfig } from '@angular/core';
-import { provideExcalidraw } from 'ngx-excalidraw';
+import { provideExcalidraw } from '@getvoicify/ngx-excalidraw';
 
 export const appConfig: ApplicationConfig = {
   providers: [provideExcalidraw({ styleUrl: 'excalidraw.css' })],
@@ -106,7 +106,7 @@ editor fails.
 
 ```ts
 import { Component, computed, signal, viewChild } from '@angular/core';
-import { ExcalidrawComponent, type ExcalidrawSceneChange } from 'ngx-excalidraw';
+import { ExcalidrawComponent, type ExcalidrawSceneChange } from '@getvoicify/ngx-excalidraw';
 
 @Component({
   selector: 'app-whiteboard',
@@ -284,7 +284,7 @@ import {
   localStorageLibraryAdapter,
   provideExcalidraw,
   provideExcalidrawLibrary,
-} from 'ngx-excalidraw';
+} from '@getvoicify/ngx-excalidraw';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -370,7 +370,7 @@ only downloaded once. On the server, every call rejects.
 
 ```ts
 import { inject, Injectable } from '@angular/core';
-import { ExcalidrawData, type ExcalidrawImperativeAPI } from 'ngx-excalidraw';
+import { ExcalidrawData, type ExcalidrawImperativeAPI } from '@getvoicify/ngx-excalidraw';
 
 @Injectable({ providedIn: 'root' })
 export class WhiteboardFiles {

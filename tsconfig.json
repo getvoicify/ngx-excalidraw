@@ -6,7 +6,7 @@
     "noPropertyAccessFromIndexSignature": true,
     "noImplicitReturns": true,
     "paths": {
-      "ngx-excalidraw": ["./projects/ngx-excalidraw/src/public-api.ts"]
+      "@getvoicify/ngx-excalidraw": ["./projects/ngx-excalidraw/src/public-api.ts"]
     },
     "noFallthroughCasesInSwitch": true,
     "skipLibCheck": true,

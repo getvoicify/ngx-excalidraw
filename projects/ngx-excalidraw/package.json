@@ -1,5 +1,5 @@
 {
-  "name": "ngx-excalidraw",
+  "name": "@getvoicify/ngx-excalidraw",
   "version": "0.1.0",
   "description": "Angular 22+ wrapper for Excalidraw — SSR-safe, lazy-loaded, zoneless, with Excalidraw library support.",
   "keywords": [

@@ -2,7 +2,7 @@ import { readdirSync } from 'node:fs';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import ts from 'typescript';
 
-const allowedPackage = /^(?:@angular\/[^/]+(?:\/.*)?|rxjs(?:\/.*)?|ngx-excalidraw)$/;
+const allowedPackage = /^(?:@angular\/[^/]+(?:\/.*)?|rxjs(?:\/.*)?|@getvoicify\/ngx-excalidraw)$/;
 const serverOnlyPackage = /^(?:express|node:.+)$/;
 const serverEntries = new Set(['server.ts']);
 const sourceExtension = /\.(?:ts|mts|js)$/;

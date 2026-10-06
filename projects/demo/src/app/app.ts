@@ -7,7 +7,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { ExcalidrawComponent } from 'ngx-excalidraw';
+import { ExcalidrawComponent } from '@getvoicify/ngx-excalidraw';
 
 @Component({
   selector: 'app-root',

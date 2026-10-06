@@ -9,7 +9,7 @@ import {
   localStorageLibraryAdapter,
   provideExcalidraw,
   provideExcalidrawLibrary,
-} from 'ngx-excalidraw';
+} from '@getvoicify/ngx-excalidraw';
 
 export const appConfig: ApplicationConfig = {
   providers: [

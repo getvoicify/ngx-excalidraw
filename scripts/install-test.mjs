@@ -127,6 +127,11 @@ function assertPackage(packageDir) {
   );
 
   check(
+    'package name is @getvoicify/ngx-excalidraw',
+    manifest.name === '@getvoicify/ngx-excalidraw',
+    `got ${JSON.stringify(manifest.name)}`,
+  );
+  check(
     'version is a release semver, not 0.0.x',
     /^\d+\.\d+\.\d+$/.test(manifest.version ?? '') && !manifest.version.startsWith('0.0.'),
     `got ${JSON.stringify(manifest.version)}`,
@@ -204,7 +209,7 @@ import {
   ExcalidrawComponent,
   type ExcalidrawImperativeAPI,
   type ExcalidrawSceneChange,
-} from 'ngx-excalidraw';
+} from '@getvoicify/ngx-excalidraw';
 
 @Component({
   selector: 'app-root',
@@ -254,7 +259,7 @@ import {
   localStorageLibraryAdapter,
   provideExcalidraw,
   provideExcalidrawLibrary,
-} from 'ngx-excalidraw';
+} from '@getvoicify/ngx-excalidraw';
 import { routes } from './app.routes';
 
 export const appConfig: ApplicationConfig = {
