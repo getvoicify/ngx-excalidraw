@@ -5,7 +5,7 @@ export interface LibraryUrlValidatorOptions {
 
 const officialLibrarySites = ['https://libraries.excalidraw.com'];
 const officialLibraryRepositories = [
-  'https://raw.githubusercontent.com/excalidraw/excalidraw-libraries/',
+  'https://raw.githubusercontent.com/excalidraw/excalidraw-libraries/main/',
 ];
 
 export function libraryUrlValidator({

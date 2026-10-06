@@ -75,6 +75,22 @@ describe('libraryUrlValidator', () => {
         'an encoded path that climbs out of the official repository',
         'https://raw.githubusercontent.com/excalidraw/excalidraw-libraries/%2e%2e/%2e%2e/evil/x.excalidrawlib',
       ],
+      [
+        'a pull request ref in the official repository',
+        'https://raw.githubusercontent.com/excalidraw/excalidraw-libraries/refs/pull/2000/head/libraries/x.excalidrawlib',
+      ],
+      [
+        'a branch ref path in the official repository',
+        'https://raw.githubusercontent.com/excalidraw/excalidraw-libraries/refs/heads/main/libraries/x.excalidrawlib',
+      ],
+      [
+        'a commit SHA in the official repository',
+        'https://raw.githubusercontent.com/excalidraw/excalidraw-libraries/0123456789abcdef0123456789abcdef01234567/libraries/x.excalidrawlib',
+      ],
+      [
+        'another branch of the official repository',
+        'https://raw.githubusercontent.com/excalidraw/excalidraw-libraries/feature-x/libraries/x.excalidrawlib',
+      ],
       ['an unparseable URL', 'not a url'],
       ['an empty string', ''],
     ])('rejects %s', (_case, url) => {

@@ -216,7 +216,9 @@ export const appConfig: ApplicationConfig = {
   only allows your own origin rejects the official libraries site.
 - **`libraryUrlValidator({ origins?, allowOwnOrigin = true })`** builds a validator that accepts:
   - the official libraries site, `https://libraries.excalidraw.com` (https only);
-  - anything under `https://raw.githubusercontent.com/excalidraw/excalidraw-libraries/`;
+  - anything on the official repository's `main` branch,
+    `https://raw.githubusercontent.com/excalidraw/excalidraw-libraries/main/`. Other refs (pull
+    requests, other branches, commit SHAs) are rejected, since anyone can open a pull request there;
   - the page's own origin, read from `location.origin` each time a URL is checked (so it is safe
     to build in an SSR app config), unless `allowOwnOrigin` is `false`;
   - each of `origins`, matched exactly.
