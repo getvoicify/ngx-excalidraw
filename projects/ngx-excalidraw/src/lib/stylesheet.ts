@@ -12,7 +12,15 @@ export function loadStylesheetOnce(document: Document, href: string): Promise<vo
   link.setAttribute('data-ngx-excalidraw', '');
   const loaded = new Promise<void>((resolve) => {
     link.addEventListener('load', () => resolve(), { once: true });
-    link.addEventListener('error', () => resolve(), { once: true });
+    link.addEventListener(
+      'error',
+      () => {
+        loads.delete(link);
+        link.remove();
+        resolve();
+      },
+      { once: true },
+    );
   });
   loads.set(link, loaded);
   document.head.appendChild(link);
