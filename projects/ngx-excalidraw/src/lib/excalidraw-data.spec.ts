@@ -87,6 +87,23 @@ describe('ExcalidrawData', () => {
     expect(fake.module.loadLibraryFromBlob).toHaveBeenCalledWith(blob);
   });
 
+  it('passes the file handle a scene was opened from through to Excalidraw', async () => {
+    const fake = fakeModule();
+    const data = setUp(() => Promise.resolve(fake.module));
+    const blob = new Blob(['{}']);
+    const fileHandle = { kind: 'file', name: 'scene.excalidraw' } as FileSystemHandle;
+    await data.loadFromBlob(blob, appState, elements, fileHandle);
+    expect(fake.module.loadFromBlob).toHaveBeenCalledWith(blob, appState, elements, fileHandle);
+  });
+
+  it('marks imported library items with the requested status', async () => {
+    const fake = fakeModule();
+    const data = setUp(() => Promise.resolve(fake.module));
+    const blob = new Blob(['{}']);
+    await data.loadLibraryFromBlob(blob, 'published');
+    expect(fake.module.loadLibraryFromBlob).toHaveBeenCalledWith(blob, 'published');
+  });
+
   it('loads Excalidraw once across every call', async () => {
     const fake = fakeModule();
     const loader = vi.fn(() => Promise.resolve(fake.module));

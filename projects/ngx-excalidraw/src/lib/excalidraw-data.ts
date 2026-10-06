@@ -1,7 +1,5 @@
 import { isPlatformBrowser } from '@angular/common';
 import { DOCUMENT, inject, Injectable, InjectionToken, PLATFORM_ID } from '@angular/core';
-import type { ExcalidrawElement } from '@excalidraw/excalidraw/element/types';
-import type { AppState, BinaryFiles } from '@excalidraw/excalidraw/types';
 import { memoizeUntilRejected } from './memoize-until-rejected';
 import { EXCALIDRAW_CONFIG, pointExcalidrawAtAssets } from './provide-excalidraw';
 
@@ -10,6 +8,11 @@ type ExcalidrawModule = typeof import('@excalidraw/excalidraw');
 export type ExcalidrawDataModule = Pick<
   ExcalidrawModule,
   'exportToSvg' | 'exportToBlob' | 'serializeAsJSON' | 'loadFromBlob' | 'loadLibraryFromBlob'
+>;
+
+type UtilityArgs<K extends keyof ExcalidrawDataModule> = Parameters<ExcalidrawDataModule[K]>;
+type UtilityResult<K extends keyof ExcalidrawDataModule> = Promise<
+  Awaited<ReturnType<ExcalidrawDataModule[K]>>
 >;
 
 export type ExcalidrawModuleLoader = () => Promise<ExcalidrawDataModule>;
@@ -41,36 +44,25 @@ export class ExcalidrawData {
       })
     : browserOnly;
 
-  exportToSvg(options: ExportToSvgOptions): Promise<SVGSVGElement> {
-    return this.excalidraw().then((excalidraw) => excalidraw.exportToSvg(options));
+  exportToSvg(...args: UtilityArgs<'exportToSvg'>): UtilityResult<'exportToSvg'> {
+    return this.excalidraw().then((excalidraw) => excalidraw.exportToSvg(...args));
   }
 
-  exportToBlob(options: ExportToBlobOptions): Promise<Blob> {
-    return this.excalidraw().then((excalidraw) => excalidraw.exportToBlob(options));
+  exportToBlob(...args: UtilityArgs<'exportToBlob'>): UtilityResult<'exportToBlob'> {
+    return this.excalidraw().then((excalidraw) => excalidraw.exportToBlob(...args));
   }
 
-  serializeAsJSON(
-    elements: readonly ExcalidrawElement[],
-    appState: Partial<AppState>,
-    files: BinaryFiles,
-    type: 'local' | 'database',
-  ): Promise<string> {
-    return this.excalidraw().then((excalidraw) =>
-      excalidraw.serializeAsJSON(elements, appState, files, type),
-    );
+  serializeAsJSON(...args: UtilityArgs<'serializeAsJSON'>): UtilityResult<'serializeAsJSON'> {
+    return this.excalidraw().then((excalidraw) => excalidraw.serializeAsJSON(...args));
   }
 
-  loadFromBlob(
-    blob: Blob,
-    localAppState: AppState | null,
-    localElements: readonly ExcalidrawElement[] | null,
-  ): Promise<RestoredScene> {
-    return this.excalidraw().then((excalidraw) =>
-      excalidraw.loadFromBlob(blob, localAppState, localElements),
-    );
+  loadFromBlob(...args: UtilityArgs<'loadFromBlob'>): UtilityResult<'loadFromBlob'> {
+    return this.excalidraw().then((excalidraw) => excalidraw.loadFromBlob(...args));
   }
 
-  loadLibraryFromBlob(blob: Blob): Promise<LoadedLibraryItems> {
-    return this.excalidraw().then((excalidraw) => excalidraw.loadLibraryFromBlob(blob));
+  loadLibraryFromBlob(
+    ...args: UtilityArgs<'loadLibraryFromBlob'>
+  ): UtilityResult<'loadLibraryFromBlob'> {
+    return this.excalidraw().then((excalidraw) => excalidraw.loadLibraryFromBlob(...args));
   }
 }
