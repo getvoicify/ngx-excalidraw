@@ -15,6 +15,16 @@ settles.
 npm install ngx-excalidraw @excalidraw/excalidraw react react-dom
 ```
 
+Excalidraw 0.18's published `.d.ts` files import `@excalidraw/math` and `@excalidraw/utils`, which
+the package does not ship or depend on. This is an upstream packaging issue, and it has two
+effects:
+
+- your app needs `skipLibCheck: true`, which is Angular's default;
+- some deep types become `any`. For example, Excalidraw's `exportToSvg` and `exportToBlob`
+  signatures, and the point types of linear elements.
+
+The types ngx-excalidraw declares itself, such as the scene action options, are fully typed.
+
 ## Setup
 
 The library does not import Excalidraw's CSS. Emit it as a separate, non-injected stylesheet in
