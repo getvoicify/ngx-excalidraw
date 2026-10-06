@@ -31,6 +31,14 @@ class ThemedHost {
   readonly theme = signal<'light' | 'dark'>('light');
 }
 
+@Component({
+  imports: [ExcalidrawComponent],
+  template: `<ngx-excalidraw [mainMenu]="mainMenu()" />`,
+})
+class MainMenuHost {
+  readonly mainMenu = signal(true);
+}
+
 class RecordingZone extends NoopNgZone {
   inside = true;
 
@@ -181,5 +189,31 @@ describe('ExcalidrawComponent change detection', () => {
     await fixture.whenStable();
 
     expect(handed.zoneInsideAtRender).toBe(false);
+  });
+
+  it('closes the main menu through React outside the Angular zone', async () => {
+    const zone = new RecordingZone();
+    const { handed, factory } = rendererHandingOverApi();
+    TestBed.configureTestingModule({
+      providers: [
+        provideZonelessChangeDetection(),
+        { provide: NgZone, useValue: zone },
+        { provide: EXCALIDRAW_RENDERER_LOADER, useValue: () => Promise.resolve(factory(zone)) },
+      ],
+    });
+    const fixture = TestBed.createComponent(MainMenuHost);
+    await fixture.whenStable();
+    await flush();
+    await fixture.whenStable();
+    let zoneInsideAtClose: boolean | undefined;
+    handed.callbacks!.onApi({
+      getAppState: () => ({ openMenu: 'canvas' }),
+      updateScene: () => (zoneInsideAtClose = zone.inside),
+    } as unknown as ExcalidrawImperativeAPI);
+
+    fixture.componentInstance.mainMenu.set(false);
+    await fixture.whenStable();
+
+    expect(zoneInsideAtClose).toBe(false);
   });
 });

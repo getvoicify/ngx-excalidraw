@@ -1,4 +1,4 @@
-import { isPlatformBrowser } from '@angular/common';
+import { isPlatformBrowser, PlatformLocation } from '@angular/common';
 import {
   ApplicationRef,
   ChangeDetectionStrategy,
@@ -48,6 +48,15 @@ import { ExcalidrawComponent, ExcalidrawData, type ExcalidrawSceneChange } from 
         />
         View mode
       </label>
+      <label>
+        <input
+          type="checkbox"
+          data-testid="main-menu"
+          [checked]="mainMenu()"
+          (change)="mainMenu.set($any($event.target).checked)"
+        />
+        Main menu
+      </label>
       <button type="button" data-testid="remove-editor" (click)="editorShown.set(false)">
         Remove editor
       </button>
@@ -61,6 +70,7 @@ import { ExcalidrawComponent, ExcalidrawData, type ExcalidrawSceneChange } from 
         <ngx-excalidraw
           [theme]="theme()"
           [viewModeEnabled]="viewMode()"
+          [mainMenu]="mainMenu()"
           (api)="onApi($event)"
           (editorError)="onEditorError($event)"
           (sceneChange)="onSceneChange($event)"
@@ -74,6 +84,9 @@ export class App {
   protected readonly ready = signal(false);
   protected readonly dark = signal(false);
   protected readonly viewMode = signal(false);
+  protected readonly mainMenu = signal(
+    new URLSearchParams(inject(PlatformLocation).search).get('mainMenu') !== 'false',
+  );
   protected readonly elementCount = signal(0);
   protected readonly libraryItemCount = signal(0);
   protected readonly editorShown = signal(true);

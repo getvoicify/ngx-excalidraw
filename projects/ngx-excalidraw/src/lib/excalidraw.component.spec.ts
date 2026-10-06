@@ -144,6 +144,27 @@ class TwoLibraryEditorsHost {
   readonly shown = signal(['a', 'b']);
 }
 
+@Component({
+  imports: [ExcalidrawComponent],
+  template: `<ngx-excalidraw [mainMenu]="mainMenu()" />`,
+})
+class MainMenuHost {
+  readonly mainMenu = signal(true);
+}
+
+@Component({
+  imports: [ExcalidrawComponent],
+  template: `<ngx-excalidraw mainMenu="false" /><ngx-excalidraw mainMenu />`,
+})
+class MainMenuAttributesHost {}
+
+function apiWithOpenMenu(openMenu: string | null) {
+  return {
+    getAppState: () => ({ openMenu }),
+    updateScene: vi.fn(),
+  } as unknown as ExcalidrawImperativeAPI & { updateScene: ReturnType<typeof vi.fn> };
+}
+
 describe('ExcalidrawComponent', () => {
   let loader: ReturnType<typeof vi.fn>;
   let fake: FakeRendererHandle;
@@ -630,6 +651,120 @@ describe('ExcalidrawComponent', () => {
       expect(renderCalls().at(-1)).toStrictEqual([
         { viewModeEnabled: true, zenModeEnabled: false, gridModeEnabled: true },
       ]);
+    });
+  });
+
+  describe('main menu', () => {
+    const hidesMainMenu = (element: Element) =>
+      element.classList.contains('ngx-excalidraw--no-main-menu');
+    const editorHost = (fixture: ComponentFixture<unknown>, index = 0) =>
+      (fixture.nativeElement as HTMLElement).querySelectorAll('ngx-excalidraw')[index];
+
+    it('shows the main menu unless told otherwise', async () => {
+      configure();
+      const fixture = await mount();
+      expect(hidesMainMenu(fixture.nativeElement)).toBe(false);
+    });
+
+    it('marks the host to hide the main menu while the input is false, and unmarks it again', async () => {
+      configure();
+      const fixture = await startLoading(MainMenuHost);
+      await fixture.whenStable();
+
+      fixture.componentInstance.mainMenu.set(false);
+      await fixture.whenStable();
+      expect(hidesMainMenu(editorHost(fixture))).toBe(true);
+
+      fixture.componentInstance.mainMenu.set(true);
+      await fixture.whenStable();
+      expect(hidesMainMenu(editorHost(fixture))).toBe(false);
+    });
+
+    it('marks the host before anything loads, so the server render already hides the menu', async () => {
+      configure([{ provide: PLATFORM_ID, useValue: 'server' }]);
+      const fixture = TestBed.createComponent(MainMenuHost);
+      fixture.componentInstance.mainMenu.set(false);
+      await fixture.whenStable();
+      expect(hidesMainMenu(editorHost(fixture))).toBe(true);
+      expect(loader).not.toHaveBeenCalled();
+    });
+
+    it('accepts the main menu flag as a plain attribute', async () => {
+      configure();
+      const fixture = await startLoading(MainMenuAttributesHost);
+      await fixture.whenStable();
+      expect(hidesMainMenu(editorHost(fixture, 0))).toBe(true);
+      expect(hidesMainMenu(editorHost(fixture, 1))).toBe(false);
+    });
+
+    it('never re-renders the editor for a main menu change', async () => {
+      configure();
+      const fixture = await startLoading(MainMenuHost);
+      await fixture.whenStable();
+      const rendersAfterMount = vi.mocked(fake.created[0].renderer.render).mock.calls.length;
+
+      fixture.componentInstance.mainMenu.set(false);
+      await fixture.whenStable();
+
+      expect(fake.created).toHaveLength(1);
+      expect(fake.created[0].renderer.render).toHaveBeenCalledTimes(rendersAfterMount);
+    });
+
+    it('closes the main menu when it is open as it gets hidden', async () => {
+      configure();
+      const fixture = await startLoading(MainMenuHost);
+      await fixture.whenStable();
+      const api = apiWithOpenMenu('canvas');
+      fake.created[0].callbacks.onApi(api);
+      await fixture.whenStable();
+
+      fixture.componentInstance.mainMenu.set(false);
+      await fixture.whenStable();
+
+      expect(api.updateScene).toHaveBeenCalledExactlyOnceWith({ appState: { openMenu: null } });
+    });
+
+    it.each([null, 'shape'])(
+      'leaves the editor alone when hiding the main menu while openMenu is %s',
+      async (openMenu) => {
+        configure();
+        const fixture = await startLoading(MainMenuHost);
+        await fixture.whenStable();
+        const api = apiWithOpenMenu(openMenu);
+        fake.created[0].callbacks.onApi(api);
+        await fixture.whenStable();
+
+        fixture.componentInstance.mainMenu.set(false);
+        await fixture.whenStable();
+
+        expect(api.updateScene).not.toHaveBeenCalled();
+      },
+    );
+
+    it('never reaches into an editor that crashed and was torn down', async () => {
+      configure();
+      const fixture = await startLoading(MainMenuHost);
+      await fixture.whenStable();
+      const api = apiWithOpenMenu('canvas');
+      fake.created[0].callbacks.onApi(api);
+      fake.created[0].callbacks.onError(new Error('crashed'));
+      await fixture.whenStable();
+
+      fixture.componentInstance.mainMenu.set(false);
+      await fixture.whenStable();
+
+      expect(api.updateScene).not.toHaveBeenCalled();
+    });
+
+    it('leaves an open main menu alone while it stays shown', async () => {
+      configure();
+      const fixture = await startLoading(MainMenuHost);
+      await fixture.whenStable();
+      const api = apiWithOpenMenu('canvas');
+      fake.created[0].callbacks.onApi(api);
+      await fixture.whenStable();
+
+      expect(api.updateScene).not.toHaveBeenCalled();
     });
   });
 });

@@ -57,3 +57,76 @@ test('enters and leaves view mode in the mounted editor, hiding the drawing tool
     await page.evaluate(() => (window as unknown as DemoWindow).__excalidrawApiEmissions),
   ).toBe(1);
 });
+
+test.describe('main menu', () => {
+  const trigger = (page: Page) => page.getByTestId('main-menu-trigger');
+  const menu = (page: Page) => page.getByTestId('dropdown-menu');
+
+  async function ready(page: Page, url = '/') {
+    await page.goto(url);
+    await expect(page.getByTestId('excalidraw-status')).toHaveText('Excalidraw ready');
+  }
+
+  test('shows the main menu trigger by default', async ({ page }) => {
+    await ready(page);
+    await expect(trigger(page)).toBeVisible();
+  });
+
+  test('hides the main menu at runtime without remounting or losing the scene, and brings it back', async ({
+    page,
+  }) => {
+    await ready(page);
+    await drawRectangle(page);
+    const canvas = await page.locator('ngx-excalidraw canvas.interactive').elementHandle();
+
+    await page.getByTestId('main-menu').uncheck();
+
+    await expect(trigger(page)).toBeHidden();
+    expect(await canvas!.evaluate((element) => element.isConnected)).toBe(true);
+    expect(await sceneElementTypes(page)).toEqual(['rectangle']);
+
+    await page.getByTestId('main-menu').check();
+
+    await expect(trigger(page)).toBeVisible();
+    await trigger(page).click();
+    await expect(menu(page)).toBeVisible();
+    expect(await canvas!.evaluate((element) => element.isConnected)).toBe(true);
+    expect(
+      await page.evaluate(() => (window as unknown as DemoWindow).__excalidrawApiEmissions),
+    ).toBe(1);
+  });
+
+  test('closes the open main menu when it gets hidden', async ({ page }) => {
+    await ready(page);
+    await trigger(page).click();
+    await expect(menu(page)).toBeVisible();
+
+    await page.getByTestId('main-menu').dispatchEvent('click');
+
+    await expect(page.getByTestId('main-menu')).not.toBeChecked();
+    await expect(menu(page)).toHaveCount(0);
+  });
+
+  test('hides the main menu on a phone-sized viewport too', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await ready(page);
+    await expect(trigger(page)).toBeVisible();
+
+    await page.getByTestId('main-menu').uncheck();
+
+    await expect(trigger(page)).toBeHidden();
+  });
+
+  test('server-renders the hidden main menu state on the editor host', async ({ request }) => {
+    const html = await (await request.get('/?mainMenu=false')).text();
+    expect(html).toMatch(/<ngx-excalidraw[^>]*class="[^"]*ngx-excalidraw--no-main-menu/);
+  });
+
+  test('hides the trigger from the first mount when the page starts with the main menu off', async ({
+    page,
+  }) => {
+    await ready(page, '/?mainMenu=false');
+    await expect(page.getByTestId('main-menu')).not.toBeChecked();
+    await expect(trigger(page)).toBeHidden();
+  });
+});

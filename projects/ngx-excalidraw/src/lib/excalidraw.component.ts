@@ -40,6 +40,9 @@ import { loadStylesheetOnce } from './stylesheet';
 @Component({
   selector: 'ngx-excalidraw',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: {
+    '[class.ngx-excalidraw--no-main-menu]': '!mainMenu()',
+  },
   styles: `
     :host {
       display: block;
@@ -48,6 +51,9 @@ import { loadStylesheetOnce } from './stylesheet';
     .ngx-excalidraw-placeholder {
       position: absolute;
       inset: 0;
+    }
+    :host(.ngx-excalidraw--no-main-menu) ::ng-deep .main-menu-trigger {
+      display: none;
     }
   `,
   template: `
@@ -72,6 +78,7 @@ export class ExcalidrawComponent implements OnDestroy {
   readonly handleKeyboardGlobally = input(undefined, { transform: optionalBooleanAttribute });
   readonly detectScroll = input(undefined, { transform: optionalBooleanAttribute });
   readonly libraryReturnUrl = input<ExcalidrawProps['libraryReturnUrl']>();
+  readonly mainMenu = input(true, { transform: booleanAttribute });
 
   readonly api = output<ExcalidrawImperativeAPI>();
   readonly editorError = output<unknown>();
@@ -123,6 +130,7 @@ export class ExcalidrawComponent implements OnDestroy {
     }),
   );
   private readonly editor = signal<ExcalidrawRenderer | null>(null);
+  private readonly editorApi = signal<ExcalidrawImperativeAPI | null>(null);
   private readonly ownedLibrary = computed(() =>
     this.libraryOwnership.owner() === this ? this.library : undefined,
   );
@@ -141,6 +149,7 @@ export class ExcalidrawComponent implements OnDestroy {
         onCleanup(() => {
           destroyRenderer();
           this.editor.set(null);
+          this.editorApi.set(null);
           this.dom.removeChild(this.host, mounted.element);
         });
       } catch (error) {
@@ -161,6 +170,11 @@ export class ExcalidrawComponent implements OnDestroy {
     });
 
     effect(() => {
+      const api = this.editorApi();
+      if (api && !this.mainMenu()) untracked(() => this.closeMainMenu(api));
+    });
+
+    effect(() => {
       const failure = this.failure();
       if (failure) untracked(() => this.editorError.emit(failure.error));
     });
@@ -177,6 +191,11 @@ export class ExcalidrawComponent implements OnDestroy {
     return this.loadRenderer();
   }
 
+  private closeMainMenu(api: ExcalidrawImperativeAPI): void {
+    if (api.getAppState().openMenu !== 'canvas') return;
+    this.zone.runOutsideAngular(() => api.updateScene({ appState: { openMenu: null } }));
+  }
+
   private mountRenderer(createRenderer: ExcalidrawRendererFactory) {
     return this.zone.runOutsideAngular(() => {
       const element: HTMLElement = this.dom.createElement('div');
@@ -188,7 +207,11 @@ export class ExcalidrawComponent implements OnDestroy {
         return {
           element,
           renderer: createRenderer(element, {
-            onApi: (api) => this.zone.run(() => this.api.emit(api)),
+            onApi: (api) =>
+              this.zone.run(() => {
+                this.editorApi.set(api);
+                this.api.emit(api);
+              }),
             onError: (error) => this.zone.run(() => this.mountFailure.set({ error })),
             onSceneChange: (change) => {
               if (this.editor()) this.zone.run(() => this.sceneChange.emit(change));
