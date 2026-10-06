@@ -9,6 +9,7 @@ settles.
 - Angular 22 (`@angular/core` and `@angular/common` `>=22.0.0 <23.0.0`)
 - `@excalidraw/excalidraw` `^0.18.0`
 - `react` and `react-dom` `^18.2.0 || ^19.0.0`
+- `rxjs` `^7.4.0`
 
 ```sh
 npm install ngx-excalidraw @excalidraw/excalidraw react react-dom

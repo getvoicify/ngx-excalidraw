@@ -6,7 +6,8 @@ Angular 22+ wrapper around `@excalidraw/excalidraw` (React). Package name: `ngx-
 
 - **Toolchain**: Angular **22.2.x**, Node **24** (`.nvmrc`; Angular CLI 22 needs Node ≥22.22 or ≥24.15).
   Peer range `@angular/core|common >=22.0.0 <23.0.0`, `@excalidraw/excalidraw ^0.18.0`,
-  `react|react-dom ^18.2.0 || ^19.0.0`. The original goal said Angular 21+; the floor moved to 22
+  `react|react-dom ^18.2.0 || ^19.0.0`, `rxjs ^7.4.0` (operators imported from the `rxjs` root
+  need 7.2+; 7.4 is Angular 22's own rxjs 7 floor). The original goal said Angular 21+; the floor moved to 22
   (approved by the owner) because `resource()` is `@experimental` in 21 and `@publicApi` from 22.0,
   and a library must not ship on an experimental API. Installability is proven by packing the
   library and installing the tarball into a fresh Angular 22 app (script-driven).

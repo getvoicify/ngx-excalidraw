@@ -27,6 +27,7 @@ const EXPECTED_PEERS = {
   '@excalidraw/excalidraw': '^0.18.0',
   react: '^18.2.0 || ^19.0.0',
   'react-dom': '^18.2.0 || ^19.0.0',
+  rxjs: '^7.4.0',
 };
 const EXCALIDRAW_MARKER = 'excalidraw-container';
 
