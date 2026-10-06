@@ -1,0 +1,77 @@
+{
+  "type": "excalidrawlib",
+  "version": 2,
+  "source": "ngx-excalidraw-demo",
+  "libraryItems": [
+    {
+      "id": "sample-box",
+      "status": "published",
+      "created": 1,
+      "name": "Box",
+      "elements": [
+        {
+          "id": "sample-box-rect",
+          "type": "rectangle",
+          "x": 0,
+          "y": 0,
+          "width": 100,
+          "height": 60,
+          "angle": 0,
+          "strokeColor": "#1e1e1e",
+          "backgroundColor": "transparent",
+          "fillStyle": "solid",
+          "strokeWidth": 2,
+          "strokeStyle": "solid",
+          "roughness": 1,
+          "opacity": 100,
+          "groupIds": [],
+          "frameId": null,
+          "roundness": null,
+          "seed": 1,
+          "version": 1,
+          "versionNonce": 1,
+          "isDeleted": false,
+          "boundElements": null,
+          "updated": 1,
+          "link": null,
+          "locked": false
+        }
+      ]
+    },
+    {
+      "id": "sample-oval",
+      "status": "published",
+      "created": 1,
+      "name": "Oval",
+      "elements": [
+        {
+          "id": "sample-oval-ellipse",
+          "type": "ellipse",
+          "x": 0,
+          "y": 0,
+          "width": 100,
+          "height": 60,
+          "angle": 0,
+          "strokeColor": "#1e1e1e",
+          "backgroundColor": "transparent",
+          "fillStyle": "solid",
+          "strokeWidth": 2,
+          "strokeStyle": "solid",
+          "roughness": 1,
+          "opacity": 100,
+          "groupIds": [],
+          "frameId": null,
+          "roundness": null,
+          "seed": 2,
+          "version": 1,
+          "versionNonce": 2,
+          "isDeleted": false,
+          "boundElements": null,
+          "updated": 1,
+          "link": null,
+          "locked": false
+        }
+      ]
+    }
+  ]
+}

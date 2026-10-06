@@ -4,12 +4,20 @@ import {
   withEventReplay,
   withNoIncrementalHydration,
 } from '@angular/platform-browser';
-import { provideExcalidraw } from 'ngx-excalidraw';
+import {
+  localStorageLibraryAdapter,
+  provideExcalidraw,
+  provideExcalidrawLibrary,
+} from 'ngx-excalidraw';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
     provideClientHydration(withEventReplay(), withNoIncrementalHydration()),
     provideExcalidraw({ styleUrl: 'excalidraw.css' }),
+    provideExcalidrawLibrary({
+      adapter: localStorageLibraryAdapter(),
+      validateLibraryUrl: (libraryUrl) => new URL(libraryUrl).origin === window.location.origin,
+    }),
   ],
 };

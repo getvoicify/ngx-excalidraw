@@ -49,6 +49,7 @@ import { ExcalidrawComponent, type ExcalidrawSceneChange } from 'ngx-excalidraw'
         Remove editor
       </button>
       <p data-testid="scene-elements">elements: {{ elementCount() }}</p>
+      <p data-testid="library-items">library: {{ libraryItemCount() }}</p>
       @if (editorShown()) {
         <ngx-excalidraw
           [theme]="theme()"
@@ -56,6 +57,7 @@ import { ExcalidrawComponent, type ExcalidrawSceneChange } from 'ngx-excalidraw'
           (api)="onApi($event)"
           (editorError)="onEditorError($event)"
           (sceneChange)="onSceneChange($event)"
+          (libraryChange)="libraryItemCount.set($event.length)"
         />
       }
     </main>
@@ -66,6 +68,7 @@ export class App {
   protected readonly dark = signal(false);
   protected readonly viewMode = signal(false);
   protected readonly elementCount = signal(0);
+  protected readonly libraryItemCount = signal(0);
   protected readonly editorShown = signal(true);
   protected readonly theme = computed(() => (this.dark() ? 'dark' : 'light'));
 
