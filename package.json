@@ -7,7 +7,10 @@
     "build:lib": "ng build ngx-excalidraw",
     "build:demo": "ng build demo",
     "test": "ng test ngx-excalidraw --watch=false && ng run ngx-excalidraw:test-zone --watch=false && ng test demo --watch=false",
+    "test:watch": "ng test ngx-excalidraw --watch",
     "e2e": "playwright test",
+    "e2e:ui": "playwright test --ui",
+    "e2e:headed": "playwright test --headed",
     "serve:ssr": "node dist/demo/server/server.mjs"
   },
   "private": true,
