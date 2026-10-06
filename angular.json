@@ -27,7 +27,16 @@
         "test": {
           "builder": "@angular/build:unit-test",
           "options": {
-            "tsConfig": "projects/ngx-excalidraw/tsconfig.spec.json"
+            "tsConfig": "projects/ngx-excalidraw/tsconfig.spec.json",
+            "exclude": ["**/*.zone.spec.ts"]
+          }
+        },
+        "test-zone": {
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "tsConfig": "projects/ngx-excalidraw/tsconfig.spec.json",
+            "include": ["**/*.zone.spec.ts"],
+            "setupFiles": ["projects/ngx-excalidraw/src/zone-setup.ts"]
           }
         }
       }

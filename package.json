@@ -6,7 +6,7 @@
     "start": "ng serve demo",
     "build:lib": "ng build ngx-excalidraw",
     "build:demo": "ng build demo",
-    "test": "ng test ngx-excalidraw --watch=false && ng test demo --watch=false",
+    "test": "ng test ngx-excalidraw --watch=false && ng run ngx-excalidraw:test-zone --watch=false && ng test demo --watch=false",
     "e2e": "playwright test",
     "serve:ssr": "node dist/demo/server/server.mjs"
   },
@@ -41,6 +41,7 @@
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "typescript": "~6.0.3",
-    "vitest": "^4.1.11"
+    "vitest": "^4.1.11",
+    "zone.js": "^0.16.3"
   }
 }

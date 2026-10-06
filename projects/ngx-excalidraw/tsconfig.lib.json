@@ -7,7 +7,7 @@
     "types": []
   },
   "include": ["src/**/*.ts"],
-  "exclude": ["**/*.spec.ts"],
+  "exclude": ["**/*.spec.ts", "src/zone-setup.ts"],
   "angularCompilerOptions": {
     "extendedDiagnostics": {
       "checks": {
