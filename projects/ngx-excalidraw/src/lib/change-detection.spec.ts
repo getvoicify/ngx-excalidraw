@@ -216,4 +216,36 @@ describe('ExcalidrawComponent change detection', () => {
 
     expect(zoneInsideAtClose).toBe(false);
   });
+
+  it('listens for main menu shortcuts outside the Angular zone', async () => {
+    const zone = new RecordingZone();
+    const { factory } = rendererHandingOverApi();
+    TestBed.configureTestingModule({
+      providers: [
+        provideZonelessChangeDetection(),
+        { provide: NgZone, useValue: zone },
+        { provide: EXCALIDRAW_RENDERER_LOADER, useValue: () => Promise.resolve(factory(zone)) },
+      ],
+    });
+    const fixture = TestBed.createComponent(MainMenuHost);
+    await fixture.whenStable();
+    await flush();
+    await fixture.whenStable();
+    const listen = vi.spyOn(document, 'addEventListener');
+    let zoneInsideAtListen: boolean | undefined;
+    listen.mockImplementation(function (this: Document, ...args) {
+      if (args[0] === 'keydown') zoneInsideAtListen = zone.inside;
+      return EventTarget.prototype.addEventListener.apply(this, args);
+    });
+
+    try {
+      fixture.componentInstance.mainMenu.set(false);
+      await fixture.whenStable();
+    } finally {
+      listen.mockRestore();
+      fixture.destroy();
+    }
+
+    expect(zoneInsideAtListen).toBe(false);
+  });
 });

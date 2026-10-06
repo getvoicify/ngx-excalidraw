@@ -34,6 +34,7 @@ import type {
 } from './renderer';
 import { EXCALIDRAW_RENDERER_LOADER } from './renderer-loader';
 import type { ExcalidrawSceneChange } from './scene-change';
+import { guardMainMenuActions } from './main-menu-guard';
 import { once } from './once';
 import { loadStylesheetOnce } from './stylesheet';
 
@@ -52,7 +53,7 @@ import { loadStylesheetOnce } from './stylesheet';
       position: absolute;
       inset: 0;
     }
-    :host(.ngx-excalidraw--no-main-menu) ::ng-deep .main-menu-trigger {
+    :host(.ngx-excalidraw--no-main-menu) ::ng-deep :is(.main-menu-trigger, .help-icon) {
       display: none;
     }
   `,
@@ -172,6 +173,14 @@ export class ExcalidrawComponent implements OnDestroy {
     effect(() => {
       const api = this.editorApi();
       if (api && !this.mainMenu()) untracked(() => this.closeMainMenu(api));
+    });
+
+    effect((onCleanup) => {
+      if (!this.editor() || this.mainMenu()) return;
+      const keyboardGlobally = untracked(this.handleKeyboardGlobally) ?? false;
+      onCleanup(
+        this.zone.runOutsideAngular(() => guardMainMenuActions(this.host, { keyboardGlobally })),
+      );
     });
 
     effect(() => {

@@ -158,6 +158,18 @@ class MainMenuHost {
 })
 class MainMenuAttributesHost {}
 
+@Component({
+  imports: [ExcalidrawComponent],
+  template: `<ngx-excalidraw mainMenu="false" handleKeyboardGlobally />`,
+})
+class GlobalKeyboardWithoutMainMenuHost {}
+
+const pressHelp = (target: EventTarget) => {
+  const event = new KeyboardEvent('keydown', { key: '?', bubbles: true, cancelable: true });
+  target.dispatchEvent(event);
+  return event.defaultPrevented;
+};
+
 function apiWithOpenMenu(openMenu: string | null) {
   return {
     getAppState: () => ({ openMenu }),
@@ -754,6 +766,45 @@ describe('ExcalidrawComponent', () => {
       await fixture.whenStable();
 
       expect(api.updateScene).not.toHaveBeenCalled();
+    });
+
+    it('keeps main menu shortcuts from the editor only while the menu is hidden', async () => {
+      configure();
+      const fixture = await startLoading(MainMenuHost);
+      await fixture.whenStable();
+      const [{ host: mountElement }] = fake.created;
+      expect(pressHelp(mountElement)).toBe(false);
+
+      fixture.componentInstance.mainMenu.set(false);
+      await fixture.whenStable();
+      expect(pressHelp(mountElement)).toBe(true);
+
+      fixture.componentInstance.mainMenu.set(true);
+      await fixture.whenStable();
+      expect(pressHelp(mountElement)).toBe(false);
+    });
+
+    it('stops guarding shortcuts once the component is destroyed', async () => {
+      configure();
+      const fixture = await startLoading(MainMenuHost);
+      fixture.componentInstance.mainMenu.set(false);
+      await fixture.whenStable();
+      const [{ host: mountElement }] = fake.created;
+
+      fixture.destroy();
+
+      expect(pressHelp(mountElement)).toBe(false);
+    });
+
+    it('guards shortcuts pressed anywhere on the page when Excalidraw handles the keyboard globally', async () => {
+      configure();
+      const fixture = await startLoading(GlobalKeyboardWithoutMainMenuHost);
+      await fixture.whenStable();
+      try {
+        expect(pressHelp(document.body)).toBe(true);
+      } finally {
+        fixture.destroy();
+      }
     });
 
     it('leaves an open main menu alone while it stays shown', async () => {
