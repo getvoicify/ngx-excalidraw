@@ -6,7 +6,7 @@
     "noPropertyAccessFromIndexSignature": true,
     "noImplicitReturns": true,
     "paths": {
-      "ngx-excalidraw": ["./dist/ngx-excalidraw"]
+      "ngx-excalidraw": ["./projects/ngx-excalidraw/src/public-api.ts"]
     },
     "noFallthroughCasesInSwitch": true,
     "skipLibCheck": true,

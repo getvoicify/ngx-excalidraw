@@ -50,7 +50,14 @@
                 "input": "projects/demo/public"
               }
             ],
-            "styles": ["projects/demo/src/styles.css"],
+            "styles": [
+              "projects/demo/src/styles.css",
+              {
+                "input": "node_modules/@excalidraw/excalidraw/dist/prod/index.css",
+                "inject": false,
+                "bundleName": "excalidraw"
+              }
+            ],
             "server": "projects/demo/src/main.server.ts",
             "outputMode": "server",
             "security": {

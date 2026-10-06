@@ -18,7 +18,7 @@ export default defineConfig({
     command: 'npm run build:demo && node dist/demo/server/server.mjs',
     url: baseURL,
     env: { PORT: String(port) },
-    reuseExistingServer: !process.env['CI'],
+    reuseExistingServer: false,
     timeout: 180_000,
   },
 });
