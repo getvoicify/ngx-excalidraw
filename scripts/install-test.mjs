@@ -19,7 +19,9 @@ const scratch = realpathSync(mkdtempSync(join(tmpdir(), 'ngx-excalidraw-install-
 const keepScratch = process.env.KEEP_INSTALL_TEST === '1';
 const startedAt = Date.now();
 const results = [];
+const REACT_RANGES = ['^19', '^18.2'];
 let server;
+let checkPrefix = '';
 
 const EXPECTED_PEERS = {
   '@angular/common': '>=22.0.0 <23.0.0',
@@ -75,7 +77,8 @@ function run(command, args, cwd) {
   return result.stdout;
 }
 
-function check(name, ok, detail = '') {
+function check(checkName, ok, detail = '') {
+  const name = `${checkPrefix}${checkName}`;
   results.push({ name, ok, detail });
   console.log(`  ${ok ? 'ok  ' : 'FAIL'} ${name}${!ok && detail ? ` — ${detail}` : ''}`);
 }
@@ -377,8 +380,22 @@ async function main() {
   step('assert tarball contents');
   assertPackage(join(unpacked, 'package'));
 
-  step('generate a fresh Angular 22 SSR zoneless app');
-  const app = join(scratch, 'consumer');
+  for (const reactRange of REACT_RANGES) {
+    checkPrefix = `[react@${reactRange}] `;
+    try {
+      await installInto(join(scratch, `consumer-react-${reactRange.replace(/\W/g, '')}`), {
+        tarball,
+        reactRange,
+      });
+    } catch (error) {
+      check('consumer phase ran to completion', false, error.message);
+    }
+  }
+  checkPrefix = '';
+}
+
+async function installInto(app, { tarball, reactRange }) {
+  step(`${checkPrefix}generate a fresh Angular 22 SSR zoneless app`);
   run(
     'npx',
     [
@@ -400,7 +417,7 @@ async function main() {
     parse(scratch).root,
   );
 
-  step('install the tarball and its peers');
+  step(`${checkPrefix}install the tarball and its peers`);
   run(
     'npm',
     [
@@ -411,13 +428,22 @@ async function main() {
       '--prefer-offline',
       tarball,
       '@excalidraw/excalidraw@^0.18',
-      'react@^19',
-      'react-dom@^19',
+      `react@${reactRange}`,
+      `react-dom@${reactRange}`,
     ],
     app,
   );
+  const installedMajors = ['react', 'react-dom'].map(
+    (name) =>
+      JSON.parse(readFileSync(join(app, 'node_modules', name, 'package.json'), 'utf8')).version,
+  );
+  check(
+    `installs react and react-dom ${reactRange}`,
+    installedMajors.every((version) => version.split('.')[0] === reactRange.match(/\d+/)[0]),
+    installedMajors.join(', '),
+  );
 
-  step('use <ngx-excalidraw> in the consumer and build it (SSR, strict templates)');
+  step(`${checkPrefix}use <ngx-excalidraw> in the consumer and build it (SSR, strict templates)`);
   patchConsumer(app);
   let buildFailure = '';
   try {
@@ -428,7 +454,7 @@ async function main() {
   check('consumer builds without errors', !buildFailure, buildFailure);
   if (buildFailure) return;
 
-  step('serve the consumer and assert the build output');
+  step(`${checkPrefix}serve the consumer and assert the build output`);
   await assertConsumer(app);
 }
 

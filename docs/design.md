@@ -117,7 +117,7 @@ allowedOrigin } catch { return false } }`. An import comes from `#addLibrary=<ur
   built SSR demo (never reusing an existing server), plus `npm run test:install`: it packs the
   production build, asserts the tarball (peer ranges, `sideEffects`, types, no tests, react-bridge
   a separate chunk importing react/excalidraw dynamically), installs it with its peers into a fresh
-  `ng new --ssr --zoneless` Angular 22 app with strict templates, builds it, and asserts the
+  `ng new --ssr --zoneless` Angular 22 app (once with React 19, once with React 18.2) with strict templates, builds it, and asserts the
   server-rendered `/` shows only the placeholder and that Excalidraw code is in a lazy chunk, never
   in the initial JS. npm installs it without `--force`; with React 19 it only warns (ERESOLVE
   overriding) about the `react ^16.8 || ^17 || ^18` peers of Excalidraw 0.18's nested Radix packages.
