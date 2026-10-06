@@ -18,13 +18,53 @@ describe('React bridge', () => {
   function excalidrawHandingOverDuringRender(onApi: ReturnType<typeof vi.fn>) {
     const api = { id: 'api' } as unknown as ExcalidrawImperativeAPI;
     const handOversDuringRender: number[] = [];
-    const Excalidraw = ({ excalidrawAPI }: ExcalidrawProps) => {
+    const Excalidraw = ({ excalidrawAPI, children }: ExcalidrawProps) => {
       excalidrawAPI?.(api);
       handOversDuringRender.push(onApi.mock.calls.length);
-      return react.createElement('div', { className: 'excalidraw' });
+      return react.createElement('div', { className: 'excalidraw' }, children);
     };
     return { api, handOversDuringRender, Excalidraw };
   }
+
+  function excalidrawConstructingItsEditorAfterLoading() {
+    const api = { id: 'late api' } as unknown as ExcalidrawImperativeAPI;
+    let finishLoading = () => undefined as void;
+    const Editor = ({ excalidrawAPI, children }: ExcalidrawProps) => {
+      excalidrawAPI?.(api);
+      return react.createElement('div', { className: 'excalidraw' }, children);
+    };
+    const Excalidraw = (props: ExcalidrawProps) => {
+      const [loading, setLoading] = react.useState(true);
+      finishLoading = () => setLoading(false);
+      return loading ? null : react.createElement(Editor, props);
+    };
+    return { api, Excalidraw, finishLoading: () => finishLoading() };
+  }
+
+  it('hands the API over when Excalidraw constructs its editor in a later commit', async () => {
+    const onApi = vi.fn();
+    const { api, Excalidraw, finishLoading } = excalidrawConstructingItsEditorAfterLoading();
+    const renderer = createRendererFactory({ react, reactDomClient, Excalidraw })(host, { onApi });
+
+    await act(async () => renderer.render({}));
+    expect(onApi).not.toHaveBeenCalled();
+    await act(async () => finishLoading());
+
+    expect(onApi.mock.calls).toEqual([[api]]);
+    await act(async () => renderer.destroy());
+  });
+
+  it('hands the API to Angular only after React has committed the render', async () => {
+    const onApi = vi.fn();
+    const { api, handOversDuringRender, Excalidraw } = excalidrawHandingOverDuringRender(onApi);
+    const renderer = createRendererFactory({ react, reactDomClient, Excalidraw })(host, { onApi });
+
+    await act(async () => renderer.render({}));
+
+    expect(handOversDuringRender).toEqual([0]);
+    expect(onApi.mock.calls).toEqual([[api]]);
+    await act(async () => renderer.destroy());
+  });
 
   it('hands the API over only once across re-renders', async () => {
     const onApi = vi.fn();

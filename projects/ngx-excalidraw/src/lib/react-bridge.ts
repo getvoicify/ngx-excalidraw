@@ -1,10 +1,10 @@
 import type { ComponentType } from 'react';
-import type { ExcalidrawProps } from '@excalidraw/excalidraw/types';
+import type { ExcalidrawImperativeAPI, ExcalidrawProps } from '@excalidraw/excalidraw/types';
 import { once } from './once';
-import type { ExcalidrawRendererFactory } from './renderer';
+import type { ExcalidrawRendererFactory, ExcalidrawRenderProps } from './renderer';
 
 export interface ReactBridgeModules {
-  react: Pick<typeof import('react'), 'createElement'>;
+  react: Pick<typeof import('react'), 'createElement' | 'useEffect' | 'useRef'>;
   reactDomClient: Pick<typeof import('react-dom/client'), 'createRoot'>;
   Excalidraw: ComponentType<ExcalidrawProps>;
 }
@@ -19,12 +19,30 @@ export function createRendererFactory({
   reactDomClient,
   Excalidraw,
 }: ReactBridgeModules): ExcalidrawRendererFactory {
+  type ApiRef = { current: ExcalidrawImperativeAPI | null };
+  type HandOver = (api: ExcalidrawImperativeAPI) => void;
+
+  const HandOverOnceEditorCommits = ({ api, onApi }: { api: ApiRef; onApi: HandOver }) => {
+    react.useEffect(() => {
+      if (api.current) onApi(api.current);
+    });
+    return null;
+  };
+
+  const ExcalidrawHost = ({ props, onApi }: { props: ExcalidrawRenderProps; onApi: HandOver }) => {
+    const api = react.useRef<ExcalidrawImperativeAPI | null>(null);
+    return react.createElement(
+      Excalidraw,
+      { ...props, excalidrawAPI: (handedOver) => (api.current = handedOver) },
+      react.createElement(HandOverOnceEditorCommits, { api, onApi }),
+    );
+  };
+
   return (host, callbacks) => {
     const root = reactDomClient.createRoot(host);
     const onApi = once(callbacks.onApi);
     return {
-      render: (props) =>
-        root.render(react.createElement(Excalidraw, { ...props, excalidrawAPI: onApi })),
+      render: (props) => root.render(react.createElement(ExcalidrawHost, { props, onApi })),
       destroy: () => root.unmount(),
     };
   };
