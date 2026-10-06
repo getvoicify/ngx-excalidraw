@@ -12,6 +12,7 @@ import { provideExcalidraw } from './provide-excalidraw';
 const elements = [{ id: 'rect', type: 'rectangle' }] as unknown as NonDeleted<ExcalidrawElement>[];
 const appState = { viewBackgroundColor: '#fff' } as AppState;
 const files = {} as BinaryFiles;
+const assetWindow = window as Window & { EXCALIDRAW_ASSET_PATH?: string };
 
 function fakeModule() {
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -42,6 +43,10 @@ function setUp(loader: () => Promise<ExcalidrawDataModule>, platform = 'browser'
 }
 
 describe('ExcalidrawData', () => {
+  afterEach(() => {
+    delete assetWindow.EXCALIDRAW_ASSET_PATH;
+  });
+
   it('exports an SVG with the given options', async () => {
     const fake = fakeModule();
     const data = setUp(() => Promise.resolve(fake.module));
@@ -126,21 +131,18 @@ describe('ExcalidrawData', () => {
     expect(loader).toHaveBeenCalledTimes(2);
   });
 
-  it('points Excalidraw at the configured asset path before loading it', async () => {
+  it('exports with fonts served from the configured asset path', async () => {
     const fake = fakeModule();
-    let assetPathAtLoad: unknown;
-    const data = setUp(
-      () => {
-        assetPathAtLoad = (window as unknown as { EXCALIDRAW_ASSET_PATH?: string })
-          .EXCALIDRAW_ASSET_PATH;
-        return Promise.resolve(fake.module);
-      },
-      'browser',
-      [provideExcalidraw({ assetPath: '/excalidraw-assets/' })] as never[],
-    );
+    let assetPathDuringExport: string | undefined;
+    fake.module.exportToSvg.mockImplementation(() => {
+      assetPathDuringExport = assetWindow.EXCALIDRAW_ASSET_PATH;
+      return Promise.resolve(fake.svg);
+    });
+    const data = setUp(() => Promise.resolve(fake.module), 'browser', [
+      provideExcalidraw({ assetPath: '/excalidraw-assets/' }),
+    ] as never[]);
     await data.exportToSvg({ elements, appState, files });
-    expect(assetPathAtLoad).toBe('/excalidraw-assets/');
-    delete (window as unknown as { EXCALIDRAW_ASSET_PATH?: string }).EXCALIDRAW_ASSET_PATH;
+    expect(assetPathDuringExport).toBe('/excalidraw-assets/');
   });
 
   it('rejects every call on the server without loading Excalidraw', async () => {

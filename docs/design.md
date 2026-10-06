@@ -72,8 +72,12 @@ Angular 22+ wrapper around `@excalidraw/excalidraw` (React). Package name: `ngx-
   injects a `<link>` once per document before first mount (recommended consumer setup: an
   `angular.json` styles entry with `inject: false, bundleName: "excalidraw"`). Without `styleUrl`
   the consumer includes the CSS globally.
-- **Assets**: `provideExcalidraw({ assetPath })` sets `window.EXCALIDRAW_ASSET_PATH` before import
-  (self-hosted fonts); unset = Excalidraw's CDN default.
+- **Assets**: `provideExcalidraw({ assetPath })` sets `window.EXCALIDRAW_ASSET_PATH` (self-hosted
+  fonts); unset = Excalidraw's CDN default. Excalidraw reads it when fonts load, not at import.
+- **Where config applies**: put `provideExcalidraw` in the application config. Provided on a lazy
+  route it reaches only the editors under that route; the root `ExcalidrawData` service sees the
+  root config alone, so a route-level `assetPath` does not apply to its exports. The global is
+  last-writer-wins per page.
 - **Libraries** (`.excalidrawlib` item collections): opt-in through
   `provideExcalidrawLibrary({ adapter?, validateLibraryUrl? })`, separate from `provideExcalidraw`
   because Excalidraw's `useHandleLibrary` reads the URL and installs a global `hashchange` listener —
@@ -103,8 +107,9 @@ allowedOrigin } catch { return false } }`. An import comes from `#addLibrary=<ur
   returning promises. Named for Excalidraw's own `data/` module (scene and library data in and out);
   `Files` was rejected because Excalidraw's `BinaryFiles` means embedded images. It imports
   `@excalidraw/excalidraw` on first call (`EXCALIDRAW_MODULE_LOADER` seam, memoized until rejected,
-  asset path applied first) — the same module the bridge imports, so the bundler emits one chunk
-  (e2e-locked). On the server every call rejects without importing.
+  root `assetPath` set before any export runs) — the same module the bridge imports, so the bundler
+  emits one chunk (e2e-locked). Each method takes Excalidraw's own parameter list and forwards it
+  verbatim. On the server every call rejects without importing.
 - **Workspace resolution**: `ngx-excalidraw` maps to the library _source_ in `tsconfig` paths; the
   packaged artifact is verified by the install test.
 - **Tests (local, non-negotiable)**: Vitest (`@angular/build:unit-test`), Playwright e2e against the
