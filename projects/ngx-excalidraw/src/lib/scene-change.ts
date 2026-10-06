@@ -60,9 +60,8 @@ export function coalesceSceneChanges({
     },
     destroy: () => {
       destroyed = true;
-      latest = null;
       if (scheduled !== null) frames.cancel(scheduled);
-      scheduled = null;
+      flush();
     },
   };
 }

@@ -1,12 +1,19 @@
 import { expect, Page, test } from '@playwright/test';
 
-type SceneElement = { type: string; x: number; version: number; versionNonce: number };
+type SceneElement = {
+  type: string;
+  x: number;
+  version: number;
+  versionNonce: number;
+  isDeleted?: boolean;
+};
 type DemoWindow = Window & {
   __sceneChangeEmissions?: number;
   __framesSeen?: number;
   __excalidrawApi: {
     getSceneElements(): SceneElement[];
     updateScene(scene: { elements: SceneElement[] }): void;
+    onChange(callback: () => void): () => void;
   };
 };
 
@@ -123,5 +130,38 @@ test('emits nothing while the pointer only hovers or pans the canvas', async ({ 
   await nextFrames(page);
 
   expect(await sceneChangeEmissions(page)).toBe(before);
+  await expect(page.getByTestId('scene-elements')).toHaveText('elements: 0');
+});
+
+test('delivers the last edit when the editor is removed before the next frame', async ({
+  page,
+}) => {
+  const centre = await canvasCentre(page);
+  await page.getByTitle(/^Rectangle/).click();
+  await page.mouse.move(centre.x - 100, centre.y - 60);
+  await page.mouse.down();
+  await page.mouse.move(centre.x + 100, centre.y + 60, { steps: 5 });
+  await page.mouse.up();
+  await expect(page.getByTestId('scene-elements')).toHaveText('elements: 1');
+  await nextFrames(page);
+
+  await page.evaluate(() => {
+    const api = (window as unknown as DemoWindow).__excalidrawApi;
+    const removeEditor = document.querySelector<HTMLButtonElement>('[data-testid=remove-editor]')!;
+    const stopListening = api.onChange(() => {
+      stopListening();
+      queueMicrotask(() => removeEditor.click());
+    });
+    api.updateScene({
+      elements: api.getSceneElements().map((element) => ({
+        ...element,
+        isDeleted: true,
+        version: element.version + 1,
+        versionNonce: element.versionNonce + 1,
+      })),
+    });
+  });
+
+  await expect(page.locator('ngx-excalidraw')).toHaveCount(0);
   await expect(page.getByTestId('scene-elements')).toHaveText('elements: 0');
 });

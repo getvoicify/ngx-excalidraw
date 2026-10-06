@@ -9,6 +9,7 @@ import {
   inject,
   input,
   NgZone,
+  OnDestroy,
   output,
   PLATFORM_ID,
   Renderer2,
@@ -27,6 +28,7 @@ import type {
 } from './renderer';
 import { EXCALIDRAW_RENDERER_LOADER } from './renderer-loader';
 import type { ExcalidrawSceneChange } from './scene-change';
+import { once } from './once';
 import { loadStylesheetOnce } from './stylesheet';
 
 @Component({
@@ -50,7 +52,7 @@ import { loadStylesheetOnce } from './stylesheet';
     }
   `,
 })
-export class ExcalidrawComponent {
+export class ExcalidrawComponent implements OnDestroy {
   readonly initialData = input<ExcalidrawProps['initialData']>();
   readonly theme = input<ExcalidrawProps['theme']>();
   readonly viewModeEnabled = input(undefined, { transform: optionalBooleanAttribute });
@@ -117,10 +119,14 @@ export class ExcalidrawComponent {
       const createRenderer = this.bundle.value();
       try {
         const mounted = untracked(() => this.mountRenderer(createRenderer));
-        this.editor.set(mounted.renderer);
+        const destroyRenderer = once(() => mounted.renderer.destroy());
+        this.editor.set({
+          render: (props) => mounted.renderer.render(props),
+          destroy: destroyRenderer,
+        });
         onCleanup(() => {
+          destroyRenderer();
           this.editor.set(null);
-          mounted.renderer.destroy();
           this.dom.removeChild(this.host, mounted.element);
         });
       } catch (error) {
@@ -139,6 +145,10 @@ export class ExcalidrawComponent {
       const failure = this.failure();
       if (failure) untracked(() => this.editorError.emit(failure.error));
     });
+  }
+
+  ngOnDestroy(): void {
+    untracked(this.editor)?.destroy();
   }
 
   private async loadBundle(abortSignal: AbortSignal): Promise<ExcalidrawRendererFactory> {

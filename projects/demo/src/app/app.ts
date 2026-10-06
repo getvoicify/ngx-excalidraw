@@ -45,14 +45,19 @@ import { ExcalidrawComponent, type ExcalidrawSceneChange } from 'ngx-excalidraw'
         />
         View mode
       </label>
+      <button type="button" data-testid="remove-editor" (click)="editorShown.set(false)">
+        Remove editor
+      </button>
       <p data-testid="scene-elements">elements: {{ elementCount() }}</p>
-      <ngx-excalidraw
-        [theme]="theme()"
-        [viewModeEnabled]="viewMode()"
-        (api)="onApi($event)"
-        (editorError)="onEditorError($event)"
-        (sceneChange)="onSceneChange($event)"
-      />
+      @if (editorShown()) {
+        <ngx-excalidraw
+          [theme]="theme()"
+          [viewModeEnabled]="viewMode()"
+          (api)="onApi($event)"
+          (editorError)="onEditorError($event)"
+          (sceneChange)="onSceneChange($event)"
+        />
+      }
     </main>
   `,
 })
@@ -61,6 +66,7 @@ export class App {
   protected readonly dark = signal(false);
   protected readonly viewMode = signal(false);
   protected readonly elementCount = signal(0);
+  protected readonly editorShown = signal(true);
   protected readonly theme = computed(() => (this.dark() ? 'dark' : 'light'));
 
   constructor() {

@@ -95,15 +95,40 @@ describe('coalesceSceneChanges', () => {
     expect(emit).toHaveBeenCalledTimes(1);
   });
 
-  it('cancels the pending frame on destroy and ignores later changes', () => {
+  it('emits the pending change synchronously on destroy and nothing afterwards', () => {
     const { scene, emit, runFrame, pendingCount } = setUp();
-    scene.onChange([element('a', 1)], appState(0), noFiles);
+    const last = [element('a', 1)];
+    scene.onChange(last, appState(0), noFiles);
 
     scene.destroy();
-    scene.onChange([element('a', 2)], appState(0), noFiles);
+    expect(emit.mock.calls).toEqual([
+      [{ elements: last, appState: appState(0), files: noFiles, version: 1 }],
+    ]);
+    expect(pendingCount()).toBe(0);
 
+    scene.onChange([element('a', 2)], appState(0), noFiles);
     expect(pendingCount()).toBe(0);
     runFrame();
+    scene.destroy();
+    expect(emit).toHaveBeenCalledTimes(1);
+  });
+
+  it('emits nothing on destroy when the pending change leaves the scene unchanged', () => {
+    const { scene, emit, runFrame } = setUp();
+    scene.onChange([element('a', 1)], appState(0), noFiles);
+    runFrame();
+    scene.onChange([element('a', 1)], appState(300), noFiles);
+
+    scene.destroy();
+
+    expect(emit).toHaveBeenCalledTimes(1);
+  });
+
+  it('emits nothing on destroy when no change is pending', () => {
+    const { scene, emit } = setUp();
+
+    scene.destroy();
+
     expect(emit).not.toHaveBeenCalled();
   });
 });

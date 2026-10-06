@@ -53,6 +53,9 @@ function deferred<T>() {
   return { promise, resolve, reject };
 }
 
+const isDestroyedOutputWarning = (message: string) =>
+  message.includes('Unexpected emit for destroyed');
+
 const flush = () => new Promise((resolve) => setTimeout(resolve));
 
 @Component({
@@ -111,6 +114,14 @@ class MountOnlyInputsHost {
   readonly name = signal('first');
   readonly autoFocus = signal(false);
   readonly detectScroll = signal(false);
+}
+
+@Component({
+  imports: [ExcalidrawComponent],
+  template: `<ngx-excalidraw (sceneChange)="received.push($event)" />`,
+})
+class SceneChangeHost {
+  readonly received: ExcalidrawSceneChange[] = [];
 }
 
 describe('ExcalidrawComponent', () => {
@@ -265,19 +276,38 @@ describe('ExcalidrawComponent', () => {
     expect(emitted).toEqual([change]);
   });
 
+  it('delivers the last scene change the renderer flushes while being destroyed', async () => {
+    configure();
+    const fixture = TestBed.createComponent(SceneChangeHost);
+    await fixture.whenStable();
+    await flush();
+    await fixture.whenStable();
+    const [{ callbacks, renderer }] = fake.created;
+    const last = { version: 9 } as unknown as ExcalidrawSceneChange;
+    vi.mocked(renderer.destroy).mockImplementation(() => callbacks.onSceneChange(last));
+    const received = fixture.componentInstance.received;
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    onTestFinished(() => warn.mockRestore());
+
+    fixture.destroy();
+
+    expect(received).toEqual([last]);
+    expect(warn.mock.calls.map(String).filter(isDestroyedOutputWarning)).toEqual([]);
+  });
+
   it('emits no scene change the renderer reports after the component is destroyed', async () => {
     configure();
     const fixture = await mount();
     const emitted: ExcalidrawSceneChange[] = [];
     fixture.componentInstance.sceneChange.subscribe((change) => emitted.push(change));
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    onTestFinished(() => warn.mockRestore());
     fixture.destroy();
 
     fake.created[0].callbacks.onSceneChange({ version: 1 } as unknown as ExcalidrawSceneChange);
 
     expect(emitted).toEqual([]);
-    expect(warn).not.toHaveBeenCalled();
-    warn.mockRestore();
+    expect(warn.mock.calls.map(String).filter(isDestroyedOutputWarning)).toEqual([]);
   });
 
   it('never creates the renderer when destroyed before the bundle finishes loading', async () => {

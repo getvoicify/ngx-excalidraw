@@ -237,7 +237,7 @@ describe('React bridge', () => {
     await act(async () => renderer.destroy());
   });
 
-  it('reports no scene change still pending when destroyed', async () => {
+  it('reports the scene change still pending when destroyed, and nothing after', async () => {
     const { Excalidraw, change } = excalidrawExposingOnChange();
     const onSceneChange = vi.fn();
     const renderer = createRendererFactory({ react, reactDomClient, Excalidraw })(host, {
@@ -249,9 +249,10 @@ describe('React bridge', () => {
 
     change([]);
     await act(async () => renderer.destroy());
+    expect(onSceneChange).toHaveBeenCalledTimes(1);
     frames.run();
 
-    expect(onSceneChange).not.toHaveBeenCalled();
+    expect(onSceneChange).toHaveBeenCalledTimes(1);
   });
 
   it('unmounts Excalidraw from the host on destroy', async () => {
