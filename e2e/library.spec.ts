@@ -15,6 +15,13 @@ function recordDialogs(page: Page, respond: (dialog: Dialog) => Promise<void>) {
   return dialogs;
 }
 
+const storedLibraryItemCount = (page: Page) =>
+  page.evaluate(
+    () =>
+      (JSON.parse(localStorage.getItem('ngx-excalidraw-library') ?? '{}').libraryItems ?? [])
+        .length as number,
+  );
+
 const addLibraryHash = (libraryUrl: string) =>
   `/#addLibrary=${encodeURIComponent(libraryUrl)}&token=e2e`;
 
@@ -39,13 +46,15 @@ test('restores the imported library from localStorage after a reload', async ({
   page,
   baseURL,
 }) => {
-  await importSampleLibrary(page, baseURL!);
+  const dialogs = await importSampleLibrary(page, baseURL!);
   await expect.poll(() => new URL(page.url()).hash).not.toContain('addLibrary');
+  await expect.poll(() => storedLibraryItemCount(page)).toBe(2);
 
   await page.reload();
 
   await expect(page.getByTestId('excalidraw-status')).toHaveText('Excalidraw ready');
   await expect(page.getByTestId('library-items')).toHaveText('library: 2');
+  expect(dialogs).toEqual(['confirm']);
 });
 
 test('refuses to import a library from an origin the validator does not allow', async ({
