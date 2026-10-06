@@ -1,6 +1,11 @@
 import type { ExcalidrawElement } from '@excalidraw/excalidraw/element/types';
 import type { AppState, BinaryFiles } from '@excalidraw/excalidraw/types';
-import { coalesceSceneChanges, type FrameScheduler } from './scene-change';
+import {
+  coalesceSceneChanges,
+  pageHiddenEvents,
+  type FrameScheduler,
+  type PageHiddenSource,
+} from './scene-change';
 
 function fakeFrames() {
   const pending = new Map<number, () => void>();
@@ -23,6 +28,21 @@ function fakeFrames() {
   return { frames, runFrame, pendingCount: () => pending.size };
 }
 
+function fakePage() {
+  const listeners = new Set<() => void>();
+  const source: PageHiddenSource = {
+    subscribe: (listener) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+  };
+  return {
+    source,
+    hide: () => listeners.forEach((listener) => listener()),
+    listenerCount: () => listeners.size,
+  };
+}
+
 const element = (id: string, versionNonce: number) =>
   ({ id, versionNonce }) as unknown as ExcalidrawElement;
 const appState = (scrollX: number, settings: Partial<AppState> = {}) =>
@@ -34,9 +54,15 @@ const sumOfNonces = (elements: readonly ExcalidrawElement[]) =>
 describe('coalesceSceneChanges', () => {
   function setUp() {
     const { frames, runFrame, pendingCount } = fakeFrames();
+    const page = fakePage();
     const emit = vi.fn();
-    const scene = coalesceSceneChanges({ frames, sceneVersion: sumOfNonces, emit });
-    return { scene, emit, runFrame, pendingCount };
+    const scene = coalesceSceneChanges({
+      frames,
+      pageHidden: page.source,
+      sceneVersion: sumOfNonces,
+      emit,
+    });
+    return { scene, emit, runFrame, pendingCount, page };
   }
 
   it('emits once per frame with the latest scene when many changes arrive within it', () => {
@@ -181,5 +207,77 @@ describe('coalesceSceneChanges', () => {
     scene.destroy();
 
     expect(emit).not.toHaveBeenCalled();
+  });
+
+  it('emits the pending change synchronously when the page is hidden', () => {
+    const { scene, emit, runFrame, page, pendingCount } = setUp();
+    scene.onChange([element('a', 1)], appState(0), noFiles);
+
+    page.hide();
+
+    expect(emit).toHaveBeenCalledTimes(1);
+    expect(pendingCount()).toBe(0);
+    runFrame();
+    expect(emit).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps coalescing changes that arrive after the page was hidden', () => {
+    const { scene, emit, runFrame, page } = setUp();
+    page.hide();
+
+    scene.onChange([element('a', 1)], appState(0), noFiles);
+    runFrame();
+
+    expect(emit).toHaveBeenCalledTimes(1);
+  });
+
+  it('stops listening for the page being hidden once destroyed', () => {
+    const { scene, page } = setUp();
+    expect(page.listenerCount()).toBe(1);
+
+    scene.destroy();
+
+    expect(page.listenerCount()).toBe(0);
+  });
+});
+
+describe('pageHiddenEvents', () => {
+  const setVisibility = (state: DocumentVisibilityState) =>
+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: state });
+
+  afterEach(() => delete (document as { visibilityState?: unknown }).visibilityState);
+
+  it('reports the document becoming hidden and the page being hidden', () => {
+    const listener = vi.fn();
+    const stop = pageHiddenEvents(window).subscribe(listener);
+
+    setVisibility('hidden');
+    document.dispatchEvent(new Event('visibilitychange'));
+    window.dispatchEvent(new Event('pagehide'));
+
+    expect(listener).toHaveBeenCalledTimes(2);
+    stop();
+  });
+
+  it('ignores the document becoming visible again', () => {
+    const listener = vi.fn();
+    const stop = pageHiddenEvents(window).subscribe(listener);
+
+    setVisibility('visible');
+    document.dispatchEvent(new Event('visibilitychange'));
+
+    expect(listener).not.toHaveBeenCalled();
+    stop();
+  });
+
+  it('reports nothing once unsubscribed', () => {
+    const listener = vi.fn();
+    pageHiddenEvents(window).subscribe(listener)();
+
+    setVisibility('hidden');
+    document.dispatchEvent(new Event('visibilitychange'));
+    window.dispatchEvent(new Event('pagehide'));
+
+    expect(listener).not.toHaveBeenCalled();
   });
 });

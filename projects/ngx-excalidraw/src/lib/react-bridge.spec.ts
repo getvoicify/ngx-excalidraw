@@ -20,11 +20,20 @@ describe('React bridge', () => {
   let host: HTMLElement;
   let frames: { scheduler: FrameScheduler; run(): void };
   let hashElementsVersion: ReturnType<typeof vi.fn>;
+  let hidePage: () => void;
 
   function createRendererFactory(modules: Omit<ReactBridgeModules, 'hashElementsVersion'>) {
     return createBridge(
       { ...modules, hashElementsVersion: hashElementsVersion as never },
-      frames.scheduler,
+      {
+        frames: frames.scheduler,
+        pageHidden: {
+          subscribe: (listener) => {
+            hidePage = listener;
+            return () => (hidePage = () => undefined);
+          },
+        },
+      },
     );
   }
 
@@ -36,6 +45,7 @@ describe('React bridge', () => {
     (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
     host = document.body.appendChild(document.createElement('div'));
     hashElementsVersion = vi.fn(() => 0);
+    hidePage = () => undefined;
     const pending: (() => void)[] = [];
     frames = {
       scheduler: {
@@ -234,6 +244,23 @@ describe('React bridge', () => {
     expect(onSceneChange.mock.calls).toEqual([
       [{ elements: latest, appState: { scrollX: 0 }, files: {}, version: 42 }],
     ]);
+    await act(async () => renderer.destroy());
+  });
+
+  it('reports the scene change still pending when the page is hidden', async () => {
+    const { Excalidraw, change } = excalidrawExposingOnChange();
+    const onSceneChange = vi.fn();
+    const renderer = createRendererFactory({ react, reactDomClient, Excalidraw })(host, {
+      onApi: vi.fn(),
+      onError: vi.fn(),
+      onSceneChange,
+    });
+    await act(async () => renderer.render({}));
+
+    change([]);
+    hidePage();
+
+    expect(onSceneChange).toHaveBeenCalledTimes(1);
     await act(async () => renderer.destroy());
   });
 

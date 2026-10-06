@@ -13,6 +13,15 @@ export interface FrameScheduler {
   cancel(handle: number): void;
 }
 
+export interface PageHiddenSource {
+  subscribe(listener: () => void): () => void;
+}
+
+export interface SceneChangeTriggers {
+  frames: FrameScheduler;
+  pageHidden: PageHiddenSource;
+}
+
 type SceneChangeListener = (
   elements: readonly ExcalidrawElement[],
   appState: AppState,
@@ -33,12 +42,28 @@ export function animationFrames(view: Window): FrameScheduler {
   };
 }
 
+export function pageHiddenEvents(view: Window): PageHiddenSource {
+  return {
+    subscribe: (listener) => {
+      const onVisibilityChange = () => {
+        if (view.document.visibilityState === 'hidden') listener();
+      };
+      view.document.addEventListener('visibilitychange', onVisibilityChange);
+      view.addEventListener('pagehide', listener);
+      return () => {
+        view.document.removeEventListener('visibilitychange', onVisibilityChange);
+        view.removeEventListener('pagehide', listener);
+      };
+    },
+  };
+}
+
 export function coalesceSceneChanges({
   frames,
+  pageHidden,
   sceneVersion,
   emit,
-}: {
-  frames: FrameScheduler;
+}: SceneChangeTriggers & {
   sceneVersion: (elements: readonly ExcalidrawElement[]) => number;
   emit: (change: ExcalidrawSceneChange) => void;
 }): { onChange: SceneChangeListener; destroy(): void } {
@@ -63,6 +88,12 @@ export function coalesceSceneChanges({
     emit({ elements: [...elements], appState, files, version });
   };
 
+  const flushNow = () => {
+    if (scheduled !== null) frames.cancel(scheduled);
+    flush();
+  };
+  const stopWatchingPage = pageHidden.subscribe(flushNow);
+
   return {
     onChange: (elements, appState, files) => {
       if (destroyed) return;
@@ -71,8 +102,8 @@ export function coalesceSceneChanges({
     },
     destroy: () => {
       destroyed = true;
-      if (scheduled !== null) frames.cancel(scheduled);
-      flush();
+      stopWatchingPage();
+      flushNow();
     },
   };
 }

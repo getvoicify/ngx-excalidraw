@@ -44,7 +44,8 @@ Angular 22+ wrapper around `@excalidraw/excalidraw` (React). Package name: `ngx-
     deprecated there), the file ids and the appState keys Excalidraw exports
     (`viewBackgroundColor`, `gridModeEnabled`, `gridSize`, `gridStep`) against the last emission; only a changed scene re-enters
     the zone. Hover, pan, zoom and selection never emit. Destroy flushes a pending change
-    synchronously (same dedupe) and emits nothing afterwards; the component tears the renderer down
+    synchronously (same dedupe) and emits nothing afterwards; so does the page becoming hidden
+    (`visibilitychange` to hidden, `pagehide`), since frames stop running in hidden tabs; the component tears the renderer down
     in `ngOnDestroy`, because Angular destroys outputs before effect cleanups run. The
     first scene seen after mount is emitted. Excalidraw already throttles pointer moves to one per
     frame, so a drag still emits about once per frame.

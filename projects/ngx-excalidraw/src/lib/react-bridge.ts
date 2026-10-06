@@ -1,7 +1,12 @@
 import type { ComponentType, ReactNode } from 'react';
 import type { ExcalidrawImperativeAPI, ExcalidrawProps } from '@excalidraw/excalidraw/types';
 import { once } from './once';
-import { animationFrames, coalesceSceneChanges, type FrameScheduler } from './scene-change';
+import {
+  animationFrames,
+  coalesceSceneChanges,
+  pageHiddenEvents,
+  type SceneChangeTriggers,
+} from './scene-change';
 import type { ExcalidrawRendererFactory, ExcalidrawRenderProps } from './renderer';
 
 export interface ReactBridgeModules {
@@ -21,7 +26,7 @@ export function commonJsExports<T extends object>(module: T): T {
 
 export function createRendererFactory(
   { react, reactDomClient, Excalidraw, hashElementsVersion }: ReactBridgeModules,
-  frames: FrameScheduler,
+  triggers: SceneChangeTriggers,
 ): ExcalidrawRendererFactory {
   type ApiRef = { current: ExcalidrawImperativeAPI | null };
   type HandOver = (api: ExcalidrawImperativeAPI) => void;
@@ -78,7 +83,7 @@ export function createRendererFactory(
     const root = reactDomClient.createRoot(host);
     const onApi = once(callbacks.onApi);
     const scene = coalesceSceneChanges({
-      frames,
+      ...triggers,
       sceneVersion: hashElementsVersion,
       emit: callbacks.onSceneChange,
     });
@@ -112,6 +117,6 @@ export async function loadExcalidrawRenderer(): Promise<ExcalidrawRendererFactor
       Excalidraw,
       hashElementsVersion,
     },
-    animationFrames(window),
+    { frames: animationFrames(window), pageHidden: pageHiddenEvents(window) },
   );
 }
