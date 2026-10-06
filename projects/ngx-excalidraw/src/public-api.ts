@@ -21,3 +21,13 @@ export {
   type ExcalidrawLibraryOptions,
 } from './lib/library';
 export { localStorageLibraryAdapter } from './lib/local-storage-library-adapter';
+export {
+  EXCALIDRAW_MODULE_LOADER,
+  ExcalidrawData,
+  type ExcalidrawDataModule,
+  type ExcalidrawModuleLoader,
+  type ExportToBlobOptions,
+  type ExportToSvgOptions,
+  type LoadedLibraryItems,
+  type RestoredScene,
+} from './lib/excalidraw-data';

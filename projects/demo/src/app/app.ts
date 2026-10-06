@@ -4,13 +4,16 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  effect,
+  ElementRef,
   inject,
   PLATFORM_ID,
   signal,
+  viewChild,
 } from '@angular/core';
 import { filter, take } from 'rxjs';
 import type { ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types';
-import { ExcalidrawComponent, type ExcalidrawSceneChange } from 'ngx-excalidraw';
+import { ExcalidrawComponent, ExcalidrawData, type ExcalidrawSceneChange } from 'ngx-excalidraw';
 
 @Component({
   selector: 'app-root',
@@ -48,6 +51,10 @@ import { ExcalidrawComponent, type ExcalidrawSceneChange } from 'ngx-excalidraw'
       <button type="button" data-testid="remove-editor" (click)="editorShown.set(false)">
         Remove editor
       </button>
+      <button type="button" data-testid="export-svg" [disabled]="!api()" (click)="exportSvg()">
+        Export SVG
+      </button>
+      <div data-testid="exported-svg" #exportedSvgTarget></div>
       <p data-testid="scene-elements">elements: {{ elementCount() }}</p>
       <p data-testid="library-items">library: {{ libraryItemCount() }}</p>
       @if (editorShown()) {
@@ -71,8 +78,17 @@ export class App {
   protected readonly libraryItemCount = signal(0);
   protected readonly editorShown = signal(true);
   protected readonly theme = computed(() => (this.dark() ? 'dark' : 'light'));
+  protected readonly api = signal<ExcalidrawImperativeAPI | undefined>(undefined);
+  private readonly exportedSvg = signal<SVGSVGElement | undefined>(undefined);
+  private readonly exportedSvgTarget =
+    viewChild.required<ElementRef<HTMLElement>>('exportedSvgTarget');
+  private readonly excalidrawData = inject(ExcalidrawData);
 
   constructor() {
+    effect(() => {
+      const svg = this.exportedSvg();
+      if (svg) this.exportedSvgTarget().nativeElement.replaceChildren(svg);
+    });
     if (!isPlatformBrowser(inject(PLATFORM_ID))) return;
     inject(ApplicationRef)
       .isStable.pipe(filter(Boolean), take(1))
@@ -89,7 +105,19 @@ export class App {
     };
     demoWindow.__excalidrawApi = api;
     demoWindow.__excalidrawApiEmissions = (demoWindow.__excalidrawApiEmissions ?? 0) + 1;
+    this.api.set(api);
     this.ready.set(true);
+  }
+
+  protected async exportSvg(): Promise<void> {
+    const api = this.api()!;
+    this.exportedSvg.set(
+      await this.excalidrawData.exportToSvg({
+        elements: api.getSceneElements(),
+        appState: api.getAppState(),
+        files: api.getFiles(),
+      }),
+    );
   }
 
   protected onSceneChange({ elements }: ExcalidrawSceneChange): void {

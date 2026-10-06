@@ -98,7 +98,13 @@ allowedOrigin } catch { return false } }`. An import comes from `#addLibrary=<ur
   emits every library update (including the adapter's initial load). `libraryReturnUrl` is
   reactive. Seed items with `initialData.libraryItems` (mount-only, merged) or
   `api.updateLibrary(...)`; there is no `libraryItems` input.
-- **Utilities**: lazily exposed `exportToSvg` / `exportToBlob` / `serializeAsJSON`.
+- **Utilities**: the root-provided `ExcalidrawData` service exposes `exportToSvg`, `exportToBlob`,
+  `serializeAsJSON`, `loadFromBlob` and `loadLibraryFromBlob` with Excalidraw 0.18's signatures, all
+  returning promises. Named for Excalidraw's own `data/` module (scene and library data in and out);
+  `Files` was rejected because Excalidraw's `BinaryFiles` means embedded images. It imports
+  `@excalidraw/excalidraw` on first call (`EXCALIDRAW_MODULE_LOADER` seam, memoized until rejected,
+  asset path applied first) — the same module the bridge imports, so the bundler emits one chunk
+  (e2e-locked). On the server every call rejects without importing.
 - **Workspace resolution**: `ngx-excalidraw` maps to the library _source_ in `tsconfig` paths; the
   packaged artifact is verified by the install test.
 - **Tests (local, non-negotiable)**: Vitest (`@angular/build:unit-test`), Playwright e2e against the

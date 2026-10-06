@@ -26,7 +26,7 @@ import type {
 import { APP_FIRST_SETTLED } from './app-settled';
 import { EXCALIDRAW_LIBRARY } from './library';
 import { LibraryOwnership } from './library-ownership';
-import { EXCALIDRAW_CONFIG } from './provide-excalidraw';
+import { EXCALIDRAW_CONFIG, pointExcalidrawAtAssets } from './provide-excalidraw';
 import type {
   ExcalidrawRenderer,
   ExcalidrawRendererFactory,
@@ -173,11 +173,7 @@ export class ExcalidrawComponent implements OnDestroy {
   private async loadBundle(abortSignal: AbortSignal): Promise<ExcalidrawRendererFactory> {
     if (this.config.styleUrl) await loadStylesheetOnce(this.document, this.config.styleUrl);
     abortSignal.throwIfAborted();
-    if (this.config.assetPath) {
-      (
-        this.document.defaultView as Window & { EXCALIDRAW_ASSET_PATH?: string }
-      ).EXCALIDRAW_ASSET_PATH = this.config.assetPath;
-    }
+    pointExcalidrawAtAssets(this.document, this.config);
     return this.loadRenderer();
   }
 
