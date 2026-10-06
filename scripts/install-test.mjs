@@ -107,6 +107,8 @@ function assertPackage(packageDir) {
     `exports["."].types = ${types}`,
   );
 
+  check('ships README.md', files.includes('README.md'), files.join(', '));
+
   const specFiles = files.filter((file) => /\.spec\b|zone-setup/.test(file));
   check('no spec files in the tarball', specFiles.length === 0, specFiles.join(', '));
   const mapsWithTests = files
