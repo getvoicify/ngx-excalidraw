@@ -135,7 +135,7 @@ export function createRendererFactory(
       emit: callbacks.onSceneChange,
     });
     return {
-      render: (props) =>
+      render: (props, library) =>
         root.render(
           react.createElement(
             ReportCrashes,
@@ -145,7 +145,7 @@ export function createRendererFactory(
               onApi,
               onChange: scene.onChange,
               onLibraryChange: callbacks.onLibraryChange,
-              library: callbacks.library,
+              library,
             }),
           ),
         ),

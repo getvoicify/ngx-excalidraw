@@ -16,11 +16,10 @@ export interface ExcalidrawRendererCallbacks {
   onError(error: unknown): void;
   onSceneChange(change: ExcalidrawSceneChange): void;
   onLibraryChange(libraryItems: LibraryItems): void;
-  library?: ExcalidrawLibraryOptions;
 }
 
 export interface ExcalidrawRenderer {
-  render(props: ExcalidrawRenderProps): void;
+  render(props: ExcalidrawRenderProps, library?: ExcalidrawLibraryOptions): void;
   destroy(): void;
 }
 

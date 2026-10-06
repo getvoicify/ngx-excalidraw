@@ -134,6 +134,16 @@ class LibraryReturnUrlHost {
   readonly libraryReturnUrl = signal('https://app.test/first');
 }
 
+@Component({
+  imports: [ExcalidrawComponent],
+  template: `@for (id of shown(); track id) {
+    <ngx-excalidraw [id]="id" />
+  }`,
+})
+class TwoLibraryEditorsHost {
+  readonly shown = signal(['a', 'b']);
+}
+
 describe('ExcalidrawComponent', () => {
   let loader: ReturnType<typeof vi.fn>;
   let fake: FakeRendererHandle;
@@ -354,13 +364,50 @@ describe('ExcalidrawComponent', () => {
 
     await mount();
 
-    expect(fake.created[0].callbacks.library).toEqual({ adapter, validateLibraryUrl });
+    expect(vi.mocked(fake.created[0].renderer.render).mock.lastCall?.[1]).toEqual({
+      adapter,
+      validateLibraryUrl,
+    });
   });
 
   it('leaves library handling off unless a library is provided', async () => {
     configure();
     await mount();
-    expect(fake.created[0].callbacks.library).toBeUndefined();
+    expect(vi.mocked(fake.created[0].renderer.render).mock.lastCall?.[1]).toBeUndefined();
+  });
+
+  describe('with two editors on one page', () => {
+    const liveEditors = () =>
+      fake.created.filter(({ renderer }) => !vi.mocked(renderer.destroy).mock.calls.length);
+    const idOf = ({ host }: { host: HTMLElement }) => host.closest('ngx-excalidraw')!.id;
+    const editorsHandlingTheLibrary = () =>
+      liveEditors()
+        .filter(({ renderer }) => vi.mocked(renderer.render).mock.lastCall?.[1] !== undefined)
+        .map(idOf);
+
+    async function mountTwoEditors() {
+      configure([provideExcalidrawLibrary({})]);
+      const fixture = await startLoading(TwoLibraryEditorsHost);
+      await fixture.whenStable();
+      return fixture;
+    }
+
+    it('runs library handling in only one of them', async () => {
+      await mountTwoEditors();
+
+      expect(editorsHandlingTheLibrary()).toHaveLength(1);
+    });
+
+    it('hands library handling to the remaining editor when the owner is destroyed', async () => {
+      const fixture = await mountTwoEditors();
+      const [owner] = editorsHandlingTheLibrary();
+
+      fixture.componentInstance.shown.update((ids) => ids.filter((id) => id !== owner));
+      await fixture.whenStable();
+
+      expect(liveEditors().map(idOf)).toEqual(fixture.componentInstance.shown());
+      expect(editorsHandlingTheLibrary()).toEqual(fixture.componentInstance.shown());
+    });
   });
 
   it('never creates the renderer when destroyed before the bundle finishes loading', async () => {
@@ -483,7 +530,8 @@ describe('ExcalidrawComponent', () => {
   });
 
   describe('Excalidraw props', () => {
-    const renderCalls = () => vi.mocked(fake.created[0].renderer.render).mock.calls;
+    const renderCalls = () =>
+      vi.mocked(fake.created[0].renderer.render).mock.calls.map(([props]) => [props]);
 
     it('renders with no props when no input is set, leaving Excalidraw its own defaults', async () => {
       configure();

@@ -25,6 +25,7 @@ import type {
 } from '@excalidraw/excalidraw/types';
 import { APP_FIRST_SETTLED } from './app-settled';
 import { EXCALIDRAW_LIBRARY } from './library';
+import { LibraryOwnership } from './library-ownership';
 import { EXCALIDRAW_CONFIG } from './provide-excalidraw';
 import type {
   ExcalidrawRenderer,
@@ -83,6 +84,7 @@ export class ExcalidrawComponent implements OnDestroy {
   private readonly document = inject(DOCUMENT);
   private readonly config = inject(EXCALIDRAW_CONFIG);
   private readonly library = inject(EXCALIDRAW_LIBRARY);
+  private readonly libraryOwnership = inject(LibraryOwnership);
   private readonly loadRenderer = inject(EXCALIDRAW_RENDERER_LOADER);
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
   private readonly appSettled = inject(APP_FIRST_SETTLED);
@@ -121,6 +123,9 @@ export class ExcalidrawComponent implements OnDestroy {
     }),
   );
   private readonly editor = signal<ExcalidrawRenderer | null>(null);
+  private readonly ownedLibrary = computed(() =>
+    this.libraryOwnership.owner() === this ? this.library : undefined,
+  );
 
   constructor() {
     effect((onCleanup) => {
@@ -130,7 +135,7 @@ export class ExcalidrawComponent implements OnDestroy {
         const mounted = untracked(() => this.mountRenderer(createRenderer));
         const destroyRenderer = once(() => mounted.renderer.destroy());
         this.editor.set({
-          render: (props) => mounted.renderer.render(props),
+          render: (props, library) => mounted.renderer.render(props, library),
           destroy: destroyRenderer,
         });
         onCleanup(() => {
@@ -147,7 +152,12 @@ export class ExcalidrawComponent implements OnDestroy {
       const editor = this.editor();
       if (!editor) return;
       const props = { ...this.renderProps(), ...untracked(this.mountOnlyProps) };
-      this.zone.runOutsideAngular(() => editor.render(props));
+      const library = this.ownedLibrary();
+      this.zone.runOutsideAngular(() => editor.render(props, library));
+    });
+
+    effect((onCleanup) => {
+      if (this.library && this.editor()) onCleanup(this.libraryOwnership.claim(this));
     });
 
     effect(() => {
@@ -190,7 +200,6 @@ export class ExcalidrawComponent implements OnDestroy {
             onLibraryChange: (libraryItems) => {
               if (this.editor()) this.zone.run(() => this.libraryChange.emit(libraryItems));
             },
-            library: this.library,
           }),
         };
       } catch (error) {

@@ -303,26 +303,38 @@ describe('React bridge', () => {
     return { handled, useHandleLibrary };
   }
 
-  it("runs Excalidraw's library handling with the committed editor API and the configured adapter and validator", async () => {
+  it("runs Excalidraw's library handling with the committed editor API and the given adapter and validator", async () => {
     const { api, Excalidraw, finishLoading } = excalidrawConstructingItsEditorAfterLoading();
     const { handled, useHandleLibrary } = libraryHandlingRecorder();
     const adapter = { load: () => null, save: () => undefined };
     const validateLibraryUrl = (url: string) => url.startsWith('https://allowed.test/');
     const renderer = createRendererFactory({ react, reactDomClient, Excalidraw, useHandleLibrary })(
       host,
-      {
-        onApi: vi.fn(),
-        onError: vi.fn(),
-        ...noSceneChanges(),
-        library: { adapter, validateLibraryUrl },
-      },
+      { onApi: vi.fn(), onError: vi.fn(), ...noSceneChanges() },
     );
 
-    await act(async () => renderer.render({}));
+    await act(async () => renderer.render({}, { adapter, validateLibraryUrl }));
     expect(handled).toEqual([]);
     await act(async () => finishLoading());
 
     expect(handled).toEqual([{ excalidrawAPI: api, adapter, validateLibraryUrl }]);
+    await act(async () => renderer.destroy());
+  });
+
+  it('starts library handling with the committed API when a later render hands the library over', async () => {
+    const { api, Excalidraw } = excalidrawHandingOverDuringRender(vi.fn());
+    const { handled, useHandleLibrary } = libraryHandlingRecorder();
+    const adapter = { load: () => null, save: () => undefined };
+    const renderer = createRendererFactory({ react, reactDomClient, Excalidraw, useHandleLibrary })(
+      host,
+      { onApi: vi.fn(), onError: vi.fn(), ...noSceneChanges() },
+    );
+    await act(async () => renderer.render({}));
+    expect(handled).toEqual([]);
+
+    await act(async () => renderer.render({}, { adapter }));
+
+    expect(handled).toEqual([{ excalidrawAPI: api, adapter }]);
     await act(async () => renderer.destroy());
   });
 
