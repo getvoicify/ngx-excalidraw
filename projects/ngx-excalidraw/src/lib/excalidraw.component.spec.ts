@@ -126,6 +126,14 @@ class SceneChangeHost {
   readonly received: ExcalidrawSceneChange[] = [];
 }
 
+@Component({
+  imports: [ExcalidrawComponent],
+  template: `<ngx-excalidraw [libraryReturnUrl]="libraryReturnUrl()" />`,
+})
+class LibraryReturnUrlHost {
+  readonly libraryReturnUrl = signal('https://app.test/first');
+}
+
 describe('ExcalidrawComponent', () => {
   let loader: ReturnType<typeof vi.fn>;
   let fake: FakeRendererHandle;
@@ -541,6 +549,19 @@ describe('ExcalidrawComponent', () => {
         expect(renderCalls()).toHaveLength(rendersAfterMount);
       },
     );
+
+    it('pushes a changed libraryReturnUrl into the mounted editor', async () => {
+      configure();
+      const fixture = await startLoading(LibraryReturnUrlHost);
+      await fixture.whenStable();
+      expect(renderCalls().at(-1)).toStrictEqual([{ libraryReturnUrl: 'https://app.test/first' }]);
+
+      fixture.componentInstance.libraryReturnUrl.set('https://app.test/second');
+      await fixture.whenStable();
+
+      expect(fake.created).toHaveLength(1);
+      expect(renderCalls().at(-1)).toStrictEqual([{ libraryReturnUrl: 'https://app.test/second' }]);
+    });
 
     it("falls back to Excalidraw's default when a boolean input is bound to undefined", async () => {
       configure();

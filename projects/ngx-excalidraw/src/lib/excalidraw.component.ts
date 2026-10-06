@@ -70,6 +70,7 @@ export class ExcalidrawComponent implements OnDestroy {
   readonly autoFocus = input(undefined, { transform: optionalBooleanAttribute });
   readonly handleKeyboardGlobally = input(undefined, { transform: optionalBooleanAttribute });
   readonly detectScroll = input(undefined, { transform: optionalBooleanAttribute });
+  readonly libraryReturnUrl = input<ExcalidrawProps['libraryReturnUrl']>();
 
   readonly api = output<ExcalidrawImperativeAPI>();
   readonly editorError = output<unknown>();
@@ -106,6 +107,7 @@ export class ExcalidrawComponent implements OnDestroy {
       gridModeEnabled: this.gridModeEnabled(),
       langCode: this.langCode(),
       UIOptions: this.UIOptions(),
+      libraryReturnUrl: this.libraryReturnUrl(),
     }),
   );
   private readonly mountOnlyProps = computed(() =>
