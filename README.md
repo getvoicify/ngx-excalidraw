@@ -47,17 +47,17 @@ nvm use
 npm ci
 ```
 
-| Command                                   | What it does                                                                                              |
-| ----------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `npm test`                                | Runs the library unit tests (zoneless, then with zone.js), the demo unit tests and the script tests once. |
-| `npm run test:watch`                      | Runs the library unit tests in watch mode.                                                                |
-| `npm run e2e`                             | Builds the demo, serves it on port 4310, and runs the Playwright tests.                                   |
-| `npm run e2e:ui`                          | Runs the same tests in Playwright's UI mode.                                                              |
-| `npm run e2e:headed`                      | Runs the same tests in a visible browser.                                                                 |
-| `npm run build:lib`                       | Builds the package into `dist/ngx-excalidraw`.                                                            |
-| `npm run test:install`                    | Packs `dist/ngx-excalidraw` (run `build:lib` first) and installs it into a fresh Angular 22 app.          |
-| `npm start`                               | Starts the demo dev server on <http://localhost:4200>.                                                    |
-| `npm run build:demo && npm run serve:ssr` | Builds the demo and serves it with SSR on <http://localhost:4000> (`PORT` overrides this).                |
+| Command                                   | What it does                                                                                                                       |
+| ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `npm test`                                | Runs the library unit tests (zoneless, then with zone.js), the demo unit tests and the script tests once.                          |
+| `npm run test:watch`                      | Runs the library unit tests in watch mode.                                                                                         |
+| `npm run e2e`                             | Builds the demo, serves it on port 4310, and runs the Playwright tests.                                                            |
+| `npm run e2e:ui`                          | Runs the same tests in Playwright's UI mode.                                                                                       |
+| `npm run e2e:headed`                      | Runs the same tests in a visible browser.                                                                                          |
+| `npm run build:lib`                       | Builds the package into `dist/ngx-excalidraw`.                                                                                     |
+| `npm run test:install`                    | Packs `dist/ngx-excalidraw` (run `build:lib` first) and installs it into fresh Angular 22 SSR apps, on React 19 and on React 18.2. |
+| `npm start`                               | Starts the demo dev server on <http://localhost:4200>.                                                                             |
+| `npm run build:demo && npm run serve:ssr` | Builds the demo and serves it with SSR on <http://localhost:4000> (`PORT` overrides this).                                         |
 
 The e2e run always starts its own server and never reuses one that is already running. If port
 4310 is taken, set `E2E_PORT`, for example `E2E_PORT=4333 npm run e2e`. Extra arguments go through
@@ -73,7 +73,16 @@ With `npm start` or `serve:ssr` running:
 - **Libraries.** Open
   <http://localhost:4200/#addLibrary=http%3A%2F%2Flocalhost%3A4200%2Fsample.excalidrawlib> (use
   port 4000 in both places for `serve:ssr`) and confirm the prompt. The `library:` counter goes up
-  and `addLibrary` disappears from the URL. The demo only accepts libraries from its own origin.
+  and `addLibrary` disappears from the URL. The demo uses `libraryUrlValidator()`, so it accepts
+  libraries from its own origin and from Excalidraw's official sources
+  (<https://libraries.excalidraw.com> and the main branch of the official
+  `excalidraw/excalidraw-libraries` repository).
+- **Browse libraries.** In the editor's library panel, choose **Browse libraries**, pick a library
+  on libraries.excalidraw.com and choose **Add to Excalidraw**. You come back to the demo and the
+  library is imported.
+- **Main menu.** Untick **Main menu**, or open the demo with `?mainMenu=false`, to hide Excalidraw's
+  main menu and block its actions: the open, save and export shortcuts, reset canvas, help, and
+  dropping scene files onto the canvas.
 - **Remove editor** destroys the component and tears down the editor.
 - **SSR.** The `serve:ssr` page source contains the server-rendered placeholder, and the Network
   tab shows the Excalidraw chunk requested only after the page settles.
