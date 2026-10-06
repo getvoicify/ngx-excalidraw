@@ -379,7 +379,7 @@ describe('ExcalidrawComponent', () => {
       expect(renderCalls().at(-1)?.[0]).toMatchObject({ theme: 'dark', viewModeEnabled: true });
     });
 
-    it('reads initialData only at mount, so a later change neither re-renders nor reaches Excalidraw', async () => {
+    it('never re-renders for an initialData change, since Excalidraw reads it only at mount', async () => {
       configure();
       const fixture = await startLoading(BoundInputsHost);
       await fixture.whenStable();
@@ -391,7 +391,6 @@ describe('ExcalidrawComponent', () => {
       await fixture.whenStable();
 
       expect(renderCalls()).toHaveLength(rendersAfterMount + 1);
-      expect(renderCalls().at(-1)?.[0]).not.toHaveProperty('initialData');
     });
 
     it('accepts boolean inputs as plain attributes', async () => {

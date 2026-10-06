@@ -102,14 +102,11 @@ export class ExcalidrawComponent {
       detectScroll: this.detectScroll(),
     }),
   );
-  private readonly mountProps = computed(() =>
-    definedOnly({ ...this.renderProps(), initialData: this.initialData() }),
-  );
   private readonly editor = signal<ExcalidrawRenderer | null>(null);
 
   constructor() {
     effect((onCleanup) => {
-      if (!this.bundle.hasValue()) return;
+      if (!this.bundle.hasValue() || this.mountFailure()) return;
       const createRenderer = this.bundle.value();
       try {
         const mounted = untracked(() => this.mountRenderer(createRenderer));
@@ -125,9 +122,17 @@ export class ExcalidrawComponent {
     });
 
     effect(() => {
-      const props = this.renderProps();
-      const editor = untracked(this.editor);
-      if (editor) this.zone.runOutsideAngular(() => editor.render(props));
+      const editor = this.editor();
+      if (!editor) return;
+      const props = {
+        ...this.renderProps(),
+        ...definedOnly({ initialData: untracked(this.initialData) }),
+      };
+      try {
+        this.zone.runOutsideAngular(() => editor.render(props));
+      } catch (error) {
+        this.mountFailure.set({ error });
+      }
     });
 
     effect(() => {
@@ -154,15 +159,14 @@ export class ExcalidrawComponent {
       this.dom.setStyle(element, 'position', 'absolute');
       this.dom.setStyle(element, 'inset', '0');
       this.dom.appendChild(this.host, element);
-      let renderer: ExcalidrawRenderer | undefined;
       try {
-        renderer = createRenderer(element, {
-          onApi: (api) => this.zone.run(() => this.api.emit(api)),
-        });
-        renderer.render(this.mountProps());
-        return { element, renderer };
+        return {
+          element,
+          renderer: createRenderer(element, {
+            onApi: (api) => this.zone.run(() => this.api.emit(api)),
+          }),
+        };
       } catch (error) {
-        renderer?.destroy();
         this.dom.removeChild(this.host, element);
         throw error;
       }
