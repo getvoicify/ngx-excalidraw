@@ -1,13 +1,10 @@
 import { TestBed } from '@angular/core/testing';
-import {
-  EXCALIDRAW_RENDERER_LOADER,
-  loadDefaultExcalidrawRenderer,
-  preloadWith,
-} from './renderer-loader';
+import { EXCALIDRAW_RENDERER_LOADER, loadDefaultExcalidrawRenderer } from '../public-api';
+import { preloadWith } from './renderer-loader';
 import type { ExcalidrawRendererFactory } from './renderer';
 
 describe('default Excalidraw renderer loader', () => {
-  it('defaults to the shared, memoized bundle import', () => {
+  it('defaults to the shared, memoized bundle import that consumers can decorate', () => {
     expect(TestBed.inject(EXCALIDRAW_RENDERER_LOADER)).toBe(loadDefaultExcalidrawRenderer);
   });
 });

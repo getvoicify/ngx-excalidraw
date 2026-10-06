@@ -7,6 +7,7 @@ export {
 export { provideExcalidraw, type ExcalidrawConfig } from './lib/provide-excalidraw';
 export {
   EXCALIDRAW_RENDERER_LOADER,
+  loadDefaultExcalidrawRenderer,
   preloadExcalidraw,
   type ExcalidrawRendererLoader,
 } from './lib/renderer-loader';
