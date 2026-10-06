@@ -161,8 +161,11 @@ function assertPackage(packageDir) {
 }
 
 const CONSUMER_APP = `import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
-import type { ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types';
-import { ExcalidrawComponent, type ExcalidrawSceneChange } from 'ngx-excalidraw';
+import {
+  ExcalidrawComponent,
+  type ExcalidrawImperativeAPI,
+  type ExcalidrawSceneChange,
+} from 'ngx-excalidraw';
 
 @Component({
   selector: 'app-root',

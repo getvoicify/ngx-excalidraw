@@ -30,3 +30,17 @@ export {
   type LoadedLibraryItems,
   type RestoredScene,
 } from './lib/excalidraw-data';
+export type {
+  AppState,
+  BinaryFiles,
+  ExcalidrawImperativeAPI,
+  ExcalidrawInitialDataState,
+  ExcalidrawProps,
+  LibraryItems,
+  UIOptions,
+} from '@excalidraw/excalidraw/types';
+export type {
+  ExcalidrawElement,
+  NonDeletedExcalidrawElement,
+  Theme,
+} from '@excalidraw/excalidraw/element/types';
