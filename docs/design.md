@@ -48,7 +48,10 @@ Angular 22+ wrapper around `@excalidraw/excalidraw` (React). Package name: `ngx-
     (`visibilitychange` to hidden, `pagehide`), since frames stop running in hidden tabs; the component tears the renderer down
     in `ngOnDestroy`, because Angular destroys outputs before effect cleanups run. The
     first scene seen after mount is emitted. Excalidraw already throttles pointer moves to one per
-    frame, so a drag still emits about once per frame.
+    frame, so a drag still emits about once per frame. Each emission carries a fresh `elements`
+    array, but the element objects are Excalidraw's own and mutated in place on later edits —
+    treat them as read-only and serialize (e.g. `serializeAsJSON`) to persist; deep-cloning per
+    frame was rejected for large-scene cost.
 - **Inputs**: reactive (pushed into the mounted editor) = `theme`, `viewModeEnabled`,
   `zenModeEnabled`, `gridModeEnabled`, `langCode`, `UIOptions`. Mount-only (Excalidraw 0.18 reads
   them only at mount; changing them later is ignored on purpose) = `initialData`,
