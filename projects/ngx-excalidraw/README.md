@@ -221,10 +221,12 @@ export const appConfig: ApplicationConfig = {
     requests, other branches, commit SHAs) are rejected, since anyone can open a pull request there;
   - the page's own origin, read from `location.origin` each time a URL is checked (so it is safe
     to build in an SSR app config), unless `allowOwnOrigin` is `false`;
-  - each of `origins`, matched exactly.
+  - each of `origins`, matched exactly. Entries are normalised once (`new URL(entry).origin`, so
+    case, a trailing `/` and a default port don't matter); an entry that is not a bare origin
+    (no path, query or hash) throws when the validator is built.
 
-  It rejects everything else, including non-http(s) and opaque URLs, lookalike hosts, other ports, URLs with credentials and
-  unparseable URLs.
+  It rejects everything else, including non-http(s) and opaque URLs, lookalike hosts, other
+  ports, URLs with credentials and unparseable URLs.
 
 - **Without `validateLibraryUrl`**, Excalidraw's default allow-list applies:
   - any `excalidraw.com` host or subdomain, over http or https. Its hostname regex leaves the dots

@@ -113,6 +113,27 @@ describe('libraryUrlValidator', () => {
     expect(isAllowed('http://libraries.example.com/shapes.excalidrawlib')).toBe(false);
   });
 
+  it.each([
+    ['a trailing slash', 'https://libs.example.com/'],
+    ['an uppercase host', 'https://LIBS.Example.COM'],
+    ['the default port spelled out', 'https://libs.example.com:443'],
+  ])('matches a configured origin written with %s', (_case, origin) => {
+    const isAllowed = libraryUrlValidator({ origins: [origin] });
+
+    expect(isAllowed('https://libs.example.com/team/shapes.excalidrawlib')).toBe(true);
+  });
+
+  it.each([
+    ['is not a URL', 'libs.example.com'],
+    ['carries a path', 'https://libs.example.com/team'],
+    ['carries a query', 'https://libs.example.com/?v=1'],
+    ['carries a hash', 'https://libs.example.com/#top'],
+  ])('refuses to build when a configured origin %s', (_case, origin) => {
+    expect(() => libraryUrlValidator({ origins: [origin] })).toThrowError(
+      `libraryUrlValidator: "${origin}" is not an origin`,
+    );
+  });
+
   describe('on a page with an opaque origin', () => {
     beforeEach(() => vi.stubGlobal('location', { origin: 'null' }));
 

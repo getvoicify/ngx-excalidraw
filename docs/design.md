@@ -93,11 +93,12 @@ Angular 22+ wrapper around `@excalidraw/excalidraw` (React). Package name: `ngx-
   `raw.githubusercontent.com/excalidraw/excalidraw-libraries/` on any branch. A custom
   `validateLibraryUrl` replaces that list rather than extending it, and Excalidraw 0.18 does not
   export its default, so `libraryUrlValidator({ origins?, allowOwnOrigin = true })` provides "own
-  origin plus the official sources": https only, origin `https://libraries.excalidraw.com`, path
-  prefix `https://raw.githubusercontent.com/excalidraw/excalidraw-libraries/main/` (other refs serve
-  pull-request content, which anyone can open), exact extra origins,
-  and `location.origin` resolved per check (SSR-safe in app config); non-http(s) URLs (so opaque origins never match), URLs with credentials and
-  unparseable URLs are rejected. The libraries site's "Add to Excalidraw" returns to
+  origin plus the official sources": over https only, origin `https://libraries.excalidraw.com`
+  and path prefix `https://raw.githubusercontent.com/excalidraw/excalidraw-libraries/main/`
+  (other refs serve pull-request content, which anyone can open); exact extra origins (normalised
+  at construction, which throws on anything but a bare origin); and `location.origin` resolved
+  per check (SSR-safe in app config). Non-http(s) URLs (so opaque origins never match), URLs with
+  credentials and unparseable URLs are rejected. The libraries site's "Add to Excalidraw" returns to
   `libraryReturnUrl` with `#addLibrary=<file url>&token=<editor id>`; its files may be the legacy v1
   `library` format, which Excalidraw restores to v2 items before the adapter saves them (e2e-locked).
   An import comes from `#addLibrary=<url>` or the legacy

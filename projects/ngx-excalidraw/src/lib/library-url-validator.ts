@@ -12,9 +12,10 @@ export function libraryUrlValidator({
   origins = [],
   allowOwnOrigin = true,
 }: LibraryUrlValidatorOptions = {}): (libraryUrl: string) => boolean {
+  const configuredOrigins = origins.map(canonicalOrigin);
   const allowedOrigins = () => [
     ...officialLibrarySites,
-    ...origins,
+    ...configuredOrigins,
     ...(allowOwnOrigin && globalThis.location ? [globalThis.location.origin] : []),
   ];
 
@@ -33,6 +34,14 @@ const webProtocols = ['http:', 'https:'];
 
 function isTrustworthyShape(url: URL): boolean {
   return webProtocols.includes(url.protocol) && url.username === '' && url.password === '';
+}
+
+function canonicalOrigin(entry: string): string {
+  const url = parsedUrl(entry);
+  if (url === null || url.href !== `${url.origin}/`) {
+    throw new Error(`libraryUrlValidator: "${entry}" is not an origin`);
+  }
+  return url.origin;
 }
 
 function parsedUrl(candidate: string): URL | null {
