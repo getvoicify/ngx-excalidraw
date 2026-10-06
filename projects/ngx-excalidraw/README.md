@@ -190,25 +190,18 @@ a global `hashchange` listener.
 ```ts
 import { ApplicationConfig } from '@angular/core';
 import {
+  libraryUrlValidator,
   localStorageLibraryAdapter,
   provideExcalidraw,
   provideExcalidrawLibrary,
 } from 'ngx-excalidraw';
-
-const allowedOrigin = 'https://libraries.example.com';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideExcalidraw({ styleUrl: 'excalidraw.css' }),
     provideExcalidrawLibrary({
       adapter: localStorageLibraryAdapter('my-app-library'),
-      validateLibraryUrl: (url) => {
-        try {
-          return new URL(url).origin === allowedOrigin;
-        } catch {
-          return false;
-        }
-      },
+      validateLibraryUrl: libraryUrlValidator({ origins: ['https://libraries.example.com'] }),
     }),
   ],
 };
@@ -218,14 +211,31 @@ export const appConfig: ApplicationConfig = {
   touches storage only inside `load` and `save`. `load` yields nothing when the data is missing,
   corrupt or unreadable. `save` rejects on failure, so Excalidraw reports the error. Any
   Excalidraw `LibraryPersistenceAdapter` (`ExcalidrawLibraryAdapter`) works.
-- **`validateLibraryUrl`** decides which URLs an `#addLibrary` link may import from. Without it,
-  Excalidraw's default allow-list applies:
+- **`validateLibraryUrl`** decides which URLs an `#addLibrary` link may import from. A custom
+  validator **replaces** Excalidraw's allow-list rather than extending it, so a validator that
+  only allows your own origin rejects the official libraries site.
+- **`libraryUrlValidator({ origins?, allowOwnOrigin = true })`** builds a validator that accepts:
+  - the official libraries site, `https://libraries.excalidraw.com` (https only);
+  - anything under `https://raw.githubusercontent.com/excalidraw/excalidraw-libraries/`;
+  - the page's own origin, read from `location.origin` each time a URL is checked (so it is safe
+    to build in an SSR app config), unless `allowOwnOrigin` is `false`;
+  - each of `origins`, matched exactly.
+
+  It rejects everything else, including lookalike hosts, other ports, URLs with credentials and
+  unparseable URLs.
+
+- **Without `validateLibraryUrl`**, Excalidraw's default allow-list applies:
   - any `excalidraw.com` host or subdomain, over http or https. Its hostname regex leaves the dots
     unescaped, so it matches more hosts than it appears to.
   - anything under `raw.githubusercontent.com/excalidraw/excalidraw-libraries/`, on any branch.
 
-  For self-hosted libraries, use an exact-origin check like the one above.
+  It does not include your own origin.
 
+- **Browse libraries.** Excalidraw's library menu links to `libraries.excalidraw.com` with
+  `libraryReturnUrl` (default: the current origin and path) as the return address. Its "Add to
+  Excalidraw" button sends the user back with `#addLibrary=<library file url>&token=<editor id>`. The import
+  only succeeds if the validator accepts `libraries.excalidraw.com`, which both the default and
+  `libraryUrlValidator()` do. Files there may be in the legacy v1 format; Excalidraw converts them.
 - **Import flow.** A link of the form `#addLibrary=<encoded url>` (or the legacy
   `?addLibrary=<url>`) asks the user to confirm with `window.confirm`, then imports the library.
   Excalidraw then strips `addLibrary` from the URL with `history.replaceState({}, …)`.

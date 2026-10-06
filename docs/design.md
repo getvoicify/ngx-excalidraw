@@ -90,9 +90,16 @@ Angular 22+ wrapper around `@excalidraw/excalidraw` (React). Package name: `ngx-
   Without `validateLibraryUrl` Excalidraw's own default applies (kept, because the libraries site's
   "Add to Excalidraw" relies on it): any `excalidraw.com` host or subdomain over http or https
   (its hostname regex leaves dots unescaped) and anything under
-  `raw.githubusercontent.com/excalidraw/excalidraw-libraries/` on any branch. For self-hosted
-  libraries pass an exact-origin validator, e.g. `url => { try { return new URL(url).origin ===
-allowedOrigin } catch { return false } }`. An import comes from `#addLibrary=<url>` or the legacy
+  `raw.githubusercontent.com/excalidraw/excalidraw-libraries/` on any branch. A custom
+  `validateLibraryUrl` replaces that list rather than extending it, and Excalidraw 0.18 does not
+  export its default, so `libraryUrlValidator({ origins?, allowOwnOrigin = true })` provides "own
+  origin plus the official sources": https only, origin `https://libraries.excalidraw.com`, path
+  prefix `https://raw.githubusercontent.com/excalidraw/excalidraw-libraries/`, exact extra origins,
+  and `location.origin` resolved per check (SSR-safe in app config); URLs with credentials and
+  unparseable URLs are rejected. The libraries site's "Add to Excalidraw" returns to
+  `libraryReturnUrl` with `#addLibrary=<file url>&token=<editor id>`; its files may be the legacy v1
+  `library` format, which Excalidraw restores to v2 items before the adapter saves them (e2e-locked).
+  An import comes from `#addLibrary=<url>` or the legacy
   `?addLibrary=<url>` query, asks `window.confirm` unless the hash's `token` equals the editor's
   `id`, then Excalidraw strips `addLibrary` with `history.replaceState({}, …)`; its `hashchange`
   handler also calls `replaceState` and `stopImmediatePropagation` for `addLibrary` hashes. Both
