@@ -15,7 +15,7 @@ export default defineConfig({
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: {
-    command: 'npm run build:demo && node dist/demo/server/server.mjs',
+    command: 'npm run build:demo:e2e && node dist/demo-e2e/server/server.mjs',
     url: baseURL,
     env: { PORT: String(port) },
     reuseExistingServer: false,

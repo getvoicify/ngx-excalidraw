@@ -96,6 +96,10 @@
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true
+            },
+            "e2e": {
+              "browser": "projects/demo/src/e2e/main.e2e.ts",
+              "outputPath": "dist/demo-e2e"
             }
           },
           "defaultConfiguration": "production"

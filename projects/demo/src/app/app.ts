@@ -1,17 +1,14 @@
-import { isPlatformBrowser, PlatformLocation } from '@angular/common';
+import { PlatformLocation } from '@angular/common';
 import {
-  ApplicationRef,
   ChangeDetectionStrategy,
   Component,
   computed,
   effect,
   ElementRef,
   inject,
-  PLATFORM_ID,
   signal,
   viewChild,
 } from '@angular/core';
-import { filter, take } from 'rxjs';
 import type { ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types';
 import { ExcalidrawComponent, ExcalidrawData, type ExcalidrawSceneChange } from 'ngx-excalidraw';
 
@@ -102,22 +99,9 @@ export class App {
       const svg = this.exportedSvg();
       if (svg) this.exportedSvgTarget().nativeElement.replaceChildren(svg);
     });
-    if (!isPlatformBrowser(inject(PLATFORM_ID))) return;
-    inject(ApplicationRef)
-      .isStable.pipe(filter(Boolean), take(1))
-      .subscribe(() => {
-        (window as unknown as { __appFirstStableAt?: number }).__appFirstStableAt =
-          performance.now();
-      });
   }
 
   protected onApi(api: ExcalidrawImperativeAPI): void {
-    const demoWindow = window as unknown as {
-      __excalidrawApi?: ExcalidrawImperativeAPI;
-      __excalidrawApiEmissions?: number;
-    };
-    demoWindow.__excalidrawApi = api;
-    demoWindow.__excalidrawApiEmissions = (demoWindow.__excalidrawApiEmissions ?? 0) + 1;
     this.api.set(api);
     this.ready.set(true);
   }
@@ -134,8 +118,6 @@ export class App {
   }
 
   protected onSceneChange({ elements }: ExcalidrawSceneChange): void {
-    const demoWindow = window as unknown as { __sceneChangeEmissions?: number };
-    demoWindow.__sceneChangeEmissions = (demoWindow.__sceneChangeEmissions ?? 0) + 1;
     this.elementCount.set(elements.filter(({ isDeleted }) => !isDeleted).length);
   }
 

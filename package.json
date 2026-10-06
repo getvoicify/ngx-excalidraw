@@ -6,6 +6,7 @@
     "start": "ng serve demo",
     "build:lib": "ng build ngx-excalidraw",
     "build:demo": "ng build demo",
+    "build:demo:e2e": "ng build demo --configuration production,e2e",
     "test": "ng test ngx-excalidraw --watch=false && ng run ngx-excalidraw:test-zone --watch=false && ng test demo --watch=false",
     "test:watch": "ng test ngx-excalidraw --watch",
     "e2e": "playwright test",
