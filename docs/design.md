@@ -35,14 +35,35 @@ Angular 21+ wrapper around `@excalidraw/excalidraw` (React). Package name: `ngx-
   Playwright e2e against the demo app served with SSR (draw, library import, SSR HTML assertions,
   hydration with no console errors), plus the pack-and-install script.
 
+## Implementation decisions (added after slice 1)
+
+- **Renderer seam**: the component never imports React. It asks an `EXCALIDRAW_RENDERER_LOADER`
+  token (default: dynamic `import()` of `react-bridge.ts`) for a renderer
+  `{ render(props): void; destroy(): void }`. The bridge alone imports `react`, `react-dom/client`
+  and `@excalidraw/excalidraw` (all dynamic, all peer externals → lazy chunks in the consuming app).
+  Unit tests inject a fake renderer; e2e exercises the real one.
+- **CSS**: Excalidraw's `index.css` is not imported by the library. `provideExcalidraw({ styleUrl })`
+  makes the component inject a `<link>` once, before first mount (recommended consumer setup:
+  `angular.json` styles entry with `inject: false, bundleName: "excalidraw"`). Without `styleUrl`
+  the consumer is assumed to include the CSS globally.
+- **Assets**: `provideExcalidraw({ assetPath })` sets `window.EXCALIDRAW_ASSET_PATH` before import
+  (self-hosted fonts); unset = Excalidraw's CDN default.
+- **Libraries**: the React bridge runs Excalidraw's own `useHandleLibrary` hook with an adapter
+  bridged from Angular (`EXCALIDRAW_LIBRARY_ADAPTER`), which yields persistence and the
+  `#addLibrary` URL import without re-implementing them.
+- **Workspace resolution**: `ngx-excalidraw` maps to the library *source* in `tsconfig` paths for
+  fast dev/test; the packaged artifact is verified separately by the slice-8 install test.
+- **e2e** never reuses an existing server (stale-build risk).
+
 ## Slice plan (one branch each, merged to main in order)
 
 1. `chore/scaffold` — workspace, library + SSR demo app, vitest + playwright wiring, one smoke test each.
 2. `feat/lazy-mount` — component: SSR placeholder, browser-only lazy mount/unmount of Excalidraw, `api` output.
 3. `feat/inputs` — theme/viewMode/zenMode/gridMode/langCode/initialData inputs pushed without remount.
 4. `feat/scene-change` — coalesced `sceneChange` output.
-5. `feat/libraries` — `libraryItems` / `libraryChange`, adapter token + localStorage adapter.
-6. `feat/library-url-import` — `#addLibrary` flow.
+5. `feat/libraries` — `libraryItems` / `libraryChange`, adapter token + localStorage adapter,
+   `useHandleLibrary` wiring.
+6. `feat/library-url-import` — `#addLibrary` flow (`validateLibraryUrl`, `libraryReturnUrl`) + e2e.
 7. `feat/export` — export service.
 8. `test/install` — pack + fresh-app install script for Angular 21 & 22, chunk-split assertion.
 9. `docs/readme` — README usage.
