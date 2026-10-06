@@ -3,14 +3,11 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
-  effect,
-  ElementRef,
   inject,
   signal,
   viewChild,
 } from '@angular/core';
-import type { ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types';
-import { ExcalidrawComponent, ExcalidrawData, type ExcalidrawSceneChange } from 'ngx-excalidraw';
+import { ExcalidrawComponent } from 'ngx-excalidraw';
 
 @Component({
   selector: 'app-root',
@@ -57,10 +54,12 @@ import { ExcalidrawComponent, ExcalidrawData, type ExcalidrawSceneChange } from 
       <button type="button" data-testid="remove-editor" (click)="editorShown.set(false)">
         Remove editor
       </button>
-      <button type="button" data-testid="export-svg" [disabled]="!api()" (click)="exportSvg()">
+      <button type="button" data-testid="export-svg" [disabled]="!ready()" (click)="exportSvg()">
         Export SVG
       </button>
-      <div data-testid="exported-svg" #exportedSvgTarget></div>
+      @if (exportedSvgUrl(); as url) {
+        <img data-testid="exported-svg" [src]="url" alt="The drawing exported as SVG" />
+      }
       <p data-testid="scene-elements">elements: {{ elementCount() }}</p>
       <p data-testid="library-items">library: {{ libraryItemCount() }}</p>
       @if (editorShown()) {
@@ -68,9 +67,8 @@ import { ExcalidrawComponent, ExcalidrawData, type ExcalidrawSceneChange } from 
           [theme]="theme()"
           [viewModeEnabled]="viewMode()"
           [mainMenu]="mainMenu()"
-          (api)="onApi($event)"
           (editorError)="onEditorError($event)"
-          (sceneChange)="onSceneChange($event)"
+          (sceneChange)="elementCount.set($event.nonDeletedElements.length)"
           (libraryChange)="libraryItemCount.set($event.length)"
         />
       }
@@ -78,7 +76,6 @@ import { ExcalidrawComponent, ExcalidrawData, type ExcalidrawSceneChange } from 
   `,
 })
 export class App {
-  protected readonly ready = signal(false);
   protected readonly dark = signal(false);
   protected readonly viewMode = signal(false);
   protected readonly mainMenu = signal(
@@ -87,38 +84,16 @@ export class App {
   protected readonly elementCount = signal(0);
   protected readonly libraryItemCount = signal(0);
   protected readonly editorShown = signal(true);
+  protected readonly exportedSvgUrl = signal<string | undefined>(undefined);
   protected readonly theme = computed(() => (this.dark() ? 'dark' : 'light'));
-  protected readonly api = signal<ExcalidrawImperativeAPI | undefined>(undefined);
-  private readonly exportedSvg = signal<SVGSVGElement | undefined>(undefined);
-  private readonly exportedSvgTarget =
-    viewChild.required<ElementRef<HTMLElement>>('exportedSvgTarget');
-  private readonly excalidrawData = inject(ExcalidrawData);
-
-  constructor() {
-    effect(() => {
-      const svg = this.exportedSvg();
-      if (svg) this.exportedSvgTarget().nativeElement.replaceChildren(svg);
-    });
-  }
-
-  protected onApi(api: ExcalidrawImperativeAPI): void {
-    this.api.set(api);
-    this.ready.set(true);
-  }
+  private readonly editor = viewChild(ExcalidrawComponent);
+  protected readonly ready = computed(() => this.editor()?.scene() !== undefined);
 
   protected async exportSvg(): Promise<void> {
-    const api = this.api()!;
-    this.exportedSvg.set(
-      await this.excalidrawData.exportToSvg({
-        elements: api.getSceneElements(),
-        appState: api.getAppState(),
-        files: api.getFiles(),
-      }),
+    const svg = await this.editor()!.exportToSvg();
+    this.exportedSvgUrl.set(
+      `data:image/svg+xml;charset=utf-8,${encodeURIComponent(new XMLSerializer().serializeToString(svg))}`,
     );
-  }
-
-  protected onSceneChange({ elements }: ExcalidrawSceneChange): void {
-    this.elementCount.set(elements.filter(({ isDeleted }) => !isDeleted).length);
   }
 
   protected onEditorError(error: unknown): void {

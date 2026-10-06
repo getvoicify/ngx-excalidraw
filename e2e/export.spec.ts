@@ -21,7 +21,7 @@ function loadedScripts(page: Page): Promise<string[]> {
   );
 }
 
-test('exports the drawn scene as an SVG through the lazy data service', async ({ page }) => {
+test('previews the drawn scene exported as an SVG image', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
 
@@ -31,9 +31,20 @@ test('exports the drawn scene as an SVG through the lazy data service', async ({
 
   await page.getByTestId('export-svg').click();
 
-  const exported = page.getByTestId('exported-svg').locator('svg');
-  await expect(exported).toHaveCount(1);
-  await expect(exported.locator('rect, path').first()).toBeAttached();
+  const preview = page.getByTestId('exported-svg');
+  await expect(preview).toHaveJSProperty('complete', true);
+  expect(await preview.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(
+    0,
+  );
+  expect(await preview.getAttribute('src')).toMatch(/^data:image\/svg\+xml/);
+  const drawnShapes = await preview.evaluate(async (image: HTMLImageElement) => {
+    const svg = new DOMParser().parseFromString(
+      await (await fetch(image.src)).text(),
+      'image/svg+xml',
+    );
+    return svg.querySelectorAll('rect, path').length;
+  });
+  expect(drawnShapes).toBeGreaterThan(0);
   expect(errors).toEqual([]);
 });
 
@@ -47,7 +58,7 @@ test('exporting reuses the Excalidraw chunk the editor already loaded', async ({
   const beforeExport = new Set(await loadedScripts(page));
 
   await page.getByTestId('export-svg').click();
-  await expect(page.getByTestId('exported-svg').locator('svg')).toHaveCount(1);
+  await expect(page.getByTestId('exported-svg')).toHaveAttribute('src', /^data:image\/svg\+xml/);
 
   const fetchedByExport = (await loadedScripts(page)).filter((url) => !beforeExport.has(url));
   for (const url of fetchedByExport) {
