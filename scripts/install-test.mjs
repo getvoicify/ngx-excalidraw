@@ -126,6 +126,32 @@ function assertPackage(packageDir) {
     `got ${JSON.stringify(manifest.repository)}`,
   );
 
+  check(
+    'version is a release semver, not 0.0.x',
+    /^\d+\.\d+\.\d+$/.test(manifest.version ?? '') && !manifest.version.startsWith('0.0.'),
+    `got ${JSON.stringify(manifest.version)}`,
+  );
+  check(
+    'description is non-empty',
+    typeof manifest.description === 'string' && manifest.description.trim().length > 0,
+    `got ${JSON.stringify(manifest.description)}`,
+  );
+  check(
+    'keywords include angular and excalidraw',
+    ['angular', 'excalidraw'].every((keyword) => manifest.keywords?.includes(keyword)),
+    `got ${JSON.stringify(manifest.keywords)}`,
+  );
+  check(
+    'publishConfig.access is public',
+    manifest.publishConfig?.access === 'public',
+    `got ${JSON.stringify(manifest.publishConfig)}`,
+  );
+
+  const sourceFiles = files.filter(
+    (file) => file.startsWith('src/') || (file.endsWith('.ts') && !file.endsWith('.d.ts')),
+  );
+  check('no source TypeScript in the tarball', sourceFiles.length === 0, sourceFiles.join(', '));
+
   const specFiles = files.filter((file) => /\.spec\b|zone-setup/.test(file));
   check('no spec files in the tarball', specFiles.length === 0, specFiles.join(', '));
   const mapsWithTests = files
