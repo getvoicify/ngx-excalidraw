@@ -61,6 +61,39 @@ Angular 22+ wrapper around `@excalidraw/excalidraw` (React). Package name: `ngx-
   Excalidraw defaults apply. `theme` going from `'dark'` to unset stays dark (Excalidraw only applies
   a defined theme); pass `'light'` explicitly — the wrapper does not default it because a defined
   theme hides Excalidraw's own theme toggle.
+- **Main menu**: `mainMenu` (reactive, default `true`); `false` means the main menu and its actions
+  are unavailable, not just the button. Excalidraw 0.18 has no prop for it: it renders
+  `DefaultMainMenu` unless a custom `<MainMenu>` child is given (which always renders the trigger
+  itself), and `UIOptions.canvasActions` only trims items. Mechanism:
+  - host class `ngx-excalidraw--no-main-menu` (host binding, so it is in the SSR HTML and nothing
+    flashes after hydration) and `:host(.ngx-excalidraw--no-main-menu) ::ng-deep
+:is(.main-menu-trigger, .help-icon) { display: none }`. `::ng-deep` under `:host(...)` reaches
+    React's DOM (which emulated encapsulation never attributes) while staying scoped to this host;
+    `ViewEncapsulation.None` would make the component's other styles global. The phone layout
+    renders the same trigger. `.help-icon` is the footer Help button, the menu's Help item
+    duplicated.
+  - an open canvas menu (`appState.openMenu === 'canvas'`) is closed with `updateScene` outside
+    the zone. Nothing else opens it: no shortcut, and the bridge does not render `<CommandPalette>`
+    (its "Canvas background" command would).
+  - `guardMainMenuActions` (attached by an effect while hidden and mounted, outside the zone):
+    a capture `keydown` listener on the document that drops Ctrl/Cmd+O, Ctrl/Cmd+S,
+    Ctrl/Cmd+Shift+E, Ctrl/Cmd+Backspace/Delete and `?` aimed at the editor (any target when
+    `handleKeyboardGlobally`), except from text entry (textarea, text/number/password input,
+    contenteditable), mirroring Excalidraw's `isWritableElement`; and a capture `drop` listener on
+    the host that holds back every dropped file and replays it (a new `DragEvent` with the same
+    coordinates) only if its type is one of Excalidraw's image types and its bytes lack
+    `application/vnd.excalidraw+json` (the PNG `tEXt` keyword and the SVG payload comment
+    Excalidraw reads a scene from). Drops without files (library items, links) pass.
+  - why not `canvasActions` (merging `loadScene`/`saveToActiveFile`/... `false` over the
+    consumer's `UIOptions`): it gates only actions the `ActionManager` dispatches (Cmd+O, Cmd+S).
+    Cmd+Shift+E and `?` are handled directly in `App.onKeyDown` (`saveAsImage: false` only stops
+    rendering the dialog; `openDialog` stays `imageExport` and the dialog would appear once the menu
+    returns), Cmd+Backspace/Delete opens the reset confirm whose confirm runs `actionClearCanvas`
+    via `executeAction` (no gate), and drops call `loadFileToCanvas` directly. Also,
+    `Excalidraw`'s memo comparator compares only the previous `canvasActions` keys, so a consumer
+    that passes `canvasActions` would not see the merge at runtime. One guard covers every path.
+  - Cmd+Shift+S (save to disk) is unreachable in 0.18: `onKeyDown` upper-cases a shifted letter
+    before the action's `key === 's'` test.
 - **Errors**: `editorError` output covers bundle load failures, renderer creation failures and
   runtime crashes inside Excalidraw (caught by an error boundary in the bridge — React 19's
   `root.render` never throws synchronously). The editor is torn down and the placeholder returns.

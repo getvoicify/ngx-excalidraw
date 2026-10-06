@@ -160,20 +160,28 @@ ignored. Reactive inputs update the editor in place, without remounting it.
 
 ### Hiding the main menu
 
-`mainMenu` (default `true`) shows or hides Excalidraw's main (hamburger) menu. Excalidraw 0.18 has
-no prop for this: `UIOptions.canvasActions` only removes some of the menu's items. Bind it to a
-signal to switch the menu at runtime. The editor is not remounted and the scene is kept.
+`mainMenu` (default `true`) makes Excalidraw's main (hamburger) menu and its actions available or
+unavailable. Excalidraw 0.18 has no prop for this: `UIOptions.canvasActions` only removes some of
+the menu's items. Bind it to a signal to switch at runtime. The editor is not remounted and the
+scene is kept.
 
 ```html
 <ngx-excalidraw [mainMenu]="showMenu()" />
 ```
 
-While it is `false`, the host carries the `ngx-excalidraw--no-main-menu` class, which hides the
-menu trigger on both the desktop and the phone layout. The class is in the server-rendered HTML,
-so the trigger never appears before hydration. If the menu is open when it gets hidden, it is
-closed. Excalidraw has no keyboard shortcut that opens it. Its command palette can open it, but the
-wrapper does not render the palette. Opening it yourself with
-`api.updateScene({ appState: { openMenu: 'canvas' } })` still works.
+While it is `false`:
+
+- the menu button (desktop and phone layouts) and the footer Help button are hidden, and an open
+  menu is closed;
+- these shortcuts do nothing: Ctrl/Cmd+O (open), Ctrl/Cmd+S (save), Ctrl/Cmd+Shift+E (export
+  image), Ctrl/Cmd+Backspace and Ctrl/Cmd+Delete (reset the canvas), and `?` (help). Typing into
+  text elements and other text fields is unaffected;
+- dropping a scene or library file (`.excalidraw`, `.excalidrawlib`, JSON, or a PNG or SVG with an
+  embedded scene) onto the editor does nothing. Plain images are still inserted.
+
+The host carries the `ngx-excalidraw--no-main-menu` class, which is in the server-rendered HTML, so
+the button never appears before hydration. Your own code can still use the API, for example
+`api.updateScene({ appState: { openMenu: 'canvas' } })`.
 
 ### Outputs
 
