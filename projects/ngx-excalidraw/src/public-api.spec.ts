@@ -10,6 +10,7 @@ describe('ngx-excalidraw public API', () => {
       'EXCALIDRAW_RENDERER_LOADER',
       'ExcalidrawComponent',
       'ExcalidrawData',
+      'libraryUrlValidator',
       'localStorageLibraryAdapter',
       'preloadExcalidraw',
       'provideExcalidraw',

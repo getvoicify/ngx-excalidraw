@@ -19,6 +19,7 @@ export {
   type ExcalidrawLibraryOptions,
 } from './lib/library';
 export { localStorageLibraryAdapter } from './lib/local-storage-library-adapter';
+export { libraryUrlValidator, type LibraryUrlValidatorOptions } from './lib/library-url-validator';
 export {
   EXCALIDRAW_MODULE_LOADER,
   ExcalidrawData,
