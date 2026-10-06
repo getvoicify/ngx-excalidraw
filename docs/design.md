@@ -79,6 +79,9 @@ Angular 22+ wrapper around `@excalidraw/excalidraw` (React). Package name: `ngx-
   because Excalidraw's `useHandleLibrary` reads the URL and installs a global `hashchange` listener —
   apps that never asked for libraries must not get that. The bridge runs the hook beside the editor
   with the API as React state set by the probe (the hook's effect depends only on the API value).
+  Only one mounted editor per page runs it (a root-level first-come claim that passes to the next
+  live editor when the owner is destroyed): each hook would otherwise import an `#addLibrary` link
+  again and its cleanup resets Excalidraw's module-level save state for the others.
   Without `validateLibraryUrl` Excalidraw's own default applies (kept, because the libraries site's
   "Add to Excalidraw" relies on it): any `excalidraw.com` host or subdomain over http or https
   (its hostname regex leaves dots unescaped) and anything under
