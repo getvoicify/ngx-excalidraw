@@ -140,14 +140,13 @@ describe('ExcalidrawComponent', () => {
     expect(host.querySelector('.ngx-excalidraw-placeholder')).toBeNull();
   });
 
-  it('emits the imperative API only once even if Excalidraw hands it over again', async () => {
+  it('emits the imperative API that the renderer hands over', async () => {
     configure();
     const fixture = await mount();
     const emitted: ExcalidrawImperativeAPI[] = [];
     fixture.componentInstance.api.subscribe((api) => emitted.push(api));
-    const api = {} as ExcalidrawImperativeAPI;
+    const api = { getSceneElements: () => [] } as unknown as ExcalidrawImperativeAPI;
     fake.created[0].callbacks.onApi(api);
-    fake.created[0].callbacks.onApi({} as ExcalidrawImperativeAPI);
     expect(emitted).toEqual([api]);
   });
 

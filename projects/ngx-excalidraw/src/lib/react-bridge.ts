@@ -1,3 +1,4 @@
+import { once } from './once';
 import type { ExcalidrawRendererFactory } from './renderer';
 
 function commonJsExports<T extends object>(module: T): T {
@@ -16,9 +17,9 @@ export async function loadExcalidrawRenderer(): Promise<ExcalidrawRendererFactor
 
   return (host, callbacks) => {
     const root = createRoot(host);
+    const onApi = once(callbacks.onApi);
     return {
-      render: (props) =>
-        root.render(createElement(Excalidraw, { ...props, excalidrawAPI: callbacks.onApi })),
+      render: (props) => root.render(createElement(Excalidraw, { ...props, excalidrawAPI: onApi })),
       destroy: () => root.unmount(),
     };
   };

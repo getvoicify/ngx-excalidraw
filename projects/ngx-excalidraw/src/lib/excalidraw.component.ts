@@ -52,17 +52,15 @@ export class ExcalidrawComponent {
   private readonly document = inject(DOCUMENT);
   private readonly config = inject(EXCALIDRAW_CONFIG);
   private readonly loadRenderer = inject(EXCALIDRAW_RENDERER_LOADER);
+  private readonly destroyRef = inject(DestroyRef);
   private renderer?: ExcalidrawRenderer;
-  private destroyed = false;
-  private apiEmitted = false;
 
   constructor() {
     const isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
     afterNextRender(() => {
       if (isBrowser) void this.mount();
     });
-    inject(DestroyRef).onDestroy(() => {
-      this.destroyed = true;
+    this.destroyRef.onDestroy(() => {
       this.renderer?.destroy();
       this.renderer = undefined;
     });
@@ -71,32 +69,28 @@ export class ExcalidrawComponent {
   private async mount(): Promise<void> {
     try {
       if (this.config.styleUrl) await loadStylesheetOnce(this.document, this.config.styleUrl);
-      if (this.destroyed) return;
+      if (this.destroyRef.destroyed) return;
       if (this.config.assetPath) {
         (
           this.document.defaultView as Window & { EXCALIDRAW_ASSET_PATH?: string }
         ).EXCALIDRAW_ASSET_PATH = this.config.assetPath;
       }
       const createRenderer = await this.loadRenderer();
-      if (this.destroyed) return;
+      if (this.destroyRef.destroyed) return;
       this.zone.runOutsideAngular(() => {
         const mountElement: HTMLElement = this.dom.createElement('div');
         this.dom.addClass(mountElement, 'ngx-excalidraw-mount');
         this.dom.setStyle(mountElement, 'position', 'absolute');
         this.dom.setStyle(mountElement, 'inset', '0');
         this.dom.appendChild(this.host, mountElement);
-        this.renderer = createRenderer(mountElement, { onApi: (api) => this.emitApi(api) });
+        this.renderer = createRenderer(mountElement, {
+          onApi: (api) => this.zone.run(() => this.api.emit(api)),
+        });
         this.renderer.render({});
       });
       this.mounted.set(true);
     } catch (error) {
-      if (!this.destroyed) this.loadError.emit(error);
+      if (!this.destroyRef.destroyed) this.loadError.emit(error);
     }
-  }
-
-  private emitApi(api: ExcalidrawImperativeAPI): void {
-    if (this.apiEmitted || this.destroyed) return;
-    this.apiEmitted = true;
-    this.zone.run(() => this.api.emit(api));
   }
 }
