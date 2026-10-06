@@ -113,6 +113,30 @@ describe('libraryUrlValidator', () => {
     expect(isAllowed('http://libraries.example.com/shapes.excalidrawlib')).toBe(false);
   });
 
+  describe('on a page with an opaque origin', () => {
+    beforeEach(() => vi.stubGlobal('location', { origin: 'null' }));
+
+    it.each([
+      ['a javascript: URL', 'javascript:alert(1)'],
+      ['a data: URL', 'data:application/json,{"type":"excalidrawlib"}'],
+      ['about:blank', 'about:blank'],
+      ['an opaque blob: URL', 'blob:null/0f6c5d1e-1111-2222-3333-444455556666'],
+      ['a file: URL', 'file:///tmp/x.excalidrawlib'],
+    ])('rejects %s', (_case, url) => {
+      expect(libraryUrlValidator()(url)).toBe(false);
+    });
+
+    it('still accepts the official libraries site', () => {
+      expect(libraryUrlValidator()(officialSiteFile)).toBe(true);
+    });
+  });
+
+  it('accepts a plain http own origin such as a local dev server', () => {
+    vi.stubGlobal('location', { origin: 'http://localhost:4200' });
+
+    expect(libraryUrlValidator()('http://localhost:4200/sample.excalidrawlib')).toBe(true);
+  });
+
   it('rejects everything but the official sources when no own origin is available', () => {
     vi.stubGlobal('location', undefined);
     const isAllowed = libraryUrlValidator();

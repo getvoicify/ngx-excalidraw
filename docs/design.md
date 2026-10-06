@@ -96,7 +96,7 @@ Angular 22+ wrapper around `@excalidraw/excalidraw` (React). Package name: `ngx-
   origin plus the official sources": https only, origin `https://libraries.excalidraw.com`, path
   prefix `https://raw.githubusercontent.com/excalidraw/excalidraw-libraries/main/` (other refs serve
   pull-request content, which anyone can open), exact extra origins,
-  and `location.origin` resolved per check (SSR-safe in app config); URLs with credentials and
+  and `location.origin` resolved per check (SSR-safe in app config); non-http(s) URLs (so opaque origins never match), URLs with credentials and
   unparseable URLs are rejected. The libraries site's "Add to Excalidraw" returns to
   `libraryReturnUrl` with `#addLibrary=<file url>&token=<editor id>`; its files may be the legacy v1
   `library` format, which Excalidraw restores to v2 items before the adapter saves them (e2e-locked).

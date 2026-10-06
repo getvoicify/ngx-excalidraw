@@ -20,13 +20,19 @@ export function libraryUrlValidator({
 
   return (libraryUrl) => {
     const url = parsedUrl(libraryUrl);
-    if (url === null || url.username !== '' || url.password !== '') return false;
+    if (url === null || !isTrustworthyShape(url)) return false;
     const location = `${url.origin}${url.pathname}`;
     return (
       allowedOrigins().includes(url.origin) ||
       officialLibraryRepositories.some((repository) => location.startsWith(repository))
     );
   };
+}
+
+const webProtocols = ['http:', 'https:'];
+
+function isTrustworthyShape(url: URL): boolean {
+  return webProtocols.includes(url.protocol) && url.username === '' && url.password === '';
 }
 
 function parsedUrl(candidate: string): URL | null {

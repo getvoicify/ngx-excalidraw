@@ -223,7 +223,7 @@ export const appConfig: ApplicationConfig = {
     to build in an SSR app config), unless `allowOwnOrigin` is `false`;
   - each of `origins`, matched exactly.
 
-  It rejects everything else, including lookalike hosts, other ports, URLs with credentials and
+  It rejects everything else, including non-http(s) and opaque URLs, lookalike hosts, other ports, URLs with credentials and
   unparseable URLs.
 
 - **Without `validateLibraryUrl`**, Excalidraw's default allow-list applies:
