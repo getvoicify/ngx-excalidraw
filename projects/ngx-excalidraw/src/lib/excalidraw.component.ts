@@ -88,7 +88,7 @@ export class ExcalidrawComponent {
   protected readonly mounted = computed(() => this.bundle.hasValue() && !this.mountFailure());
 
   private readonly renderProps = computed(() =>
-    definedOnly({
+    definedOnly<ExcalidrawRenderProps>({
       theme: this.theme(),
       viewModeEnabled: this.viewModeEnabled(),
       zenModeEnabled: this.zenModeEnabled(),
@@ -126,7 +126,7 @@ export class ExcalidrawComponent {
       if (!editor) return;
       const props = {
         ...this.renderProps(),
-        ...definedOnly({ initialData: untracked(this.initialData) }),
+        ...definedOnly<ExcalidrawRenderProps>({ initialData: untracked(this.initialData) }),
       };
       try {
         this.zone.runOutsideAngular(() => editor.render(props));
@@ -174,8 +174,10 @@ export class ExcalidrawComponent {
   }
 }
 
-function definedOnly<T extends object>(props: T): ExcalidrawRenderProps {
-  return Object.fromEntries(Object.entries(props).filter(([, value]) => value !== undefined));
+function definedOnly<T extends object>(props: { [K in keyof T]: T[K] | undefined }): Partial<T> {
+  return Object.fromEntries(
+    Object.entries(props).filter(([, value]) => value !== undefined),
+  ) as Partial<T>;
 }
 
 function optionalBooleanAttribute(value: unknown): boolean | undefined {

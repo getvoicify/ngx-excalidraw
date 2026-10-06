@@ -401,7 +401,7 @@ describe('ExcalidrawComponent', () => {
       expect(renderCalls()).toHaveLength(rendersAfterMount + 1);
     });
 
-    it('falls back to Excalidraw\'s default when a boolean input is bound to undefined', async () => {
+    it("falls back to Excalidraw's default when a boolean input is bound to undefined", async () => {
       configure();
       const fixture = await startLoading(OptionalBooleanHost);
       await fixture.whenStable();
