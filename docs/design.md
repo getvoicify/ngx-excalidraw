@@ -1,6 +1,6 @@
 # ngx-excalidraw — design
 
-Angular 22+ wrapper around `@excalidraw/excalidraw` (React). Package name: `ngx-excalidraw`.
+Angular 22+ wrapper around `@excalidraw/excalidraw` (React). Package name: `@getvoicify/ngx-excalidraw`.
 
 ## Decisions
 
@@ -153,7 +153,7 @@ Angular 22+ wrapper around `@excalidraw/excalidraw` (React). Package name: `ngx-
   root `assetPath` set before any export runs) — the same module the bridge imports, so the bundler
   emits one chunk (e2e-locked). Each method takes Excalidraw's own parameter list and forwards it
   verbatim. On the server every call rejects without importing.
-- **Consumer API** (owner directive: the demo, a real consumer, imports only `ngx-excalidraw`,
+- **Consumer API** (owner directive: the demo, a real consumer, imports only `@getvoicify/ngx-excalidraw`,
   Angular and rxjs; `scripts/demo-public-api.test.mjs` enforces it on `projects/demo/src/app` by
   parsing imports and `window.__*` accesses):
   - the Excalidraw types consumers handle are re-exported type-only (no runtime import; the
@@ -187,7 +187,7 @@ Angular 22+ wrapper around `@excalidraw/excalidraw` (React). Package name: `ngx-
     `loadDefaultExcalidrawRenderer` through `EXCALIDRAW_RENDERER_LOADER` to expose the API and count
     hand-overs and scene changes. The counts are taken at the renderer callbacks, one step before the
     outputs; the outputs themselves are covered by the DOM the demo renders from them.
-- **Workspace resolution**: `ngx-excalidraw` maps to the library _source_ in `tsconfig` paths; the
+- **Workspace resolution**: `@getvoicify/ngx-excalidraw` maps to the library _source_ in `tsconfig` paths; the
   packaged artifact is verified by the install test.
 - **Tests (local, non-negotiable)**: Vitest (`@angular/build:unit-test`), Playwright e2e against the
   built SSR demo (never reusing an existing server), plus `npm run test:install`: it packs the

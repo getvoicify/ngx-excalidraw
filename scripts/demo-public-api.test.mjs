@@ -15,17 +15,20 @@ const rejects = (text, path) => assert.notDeepEqual(violations(text, path), []);
 const accepts = (text, path) => assert.deepEqual(violations(text, path), []);
 
 describe('public API guard', () => {
-  test('accepts Angular, rxjs, ngx-excalidraw and sibling app files', () =>
+  test('accepts Angular, rxjs, @getvoicify/ngx-excalidraw and sibling app files', () =>
     accepts(`
       import { Component } from '@angular/core';
       import { provideServerRendering } from '@angular/ssr';
       import { filter } from 'rxjs';
       import { map } from 'rxjs/operators';
-      import { ExcalidrawComponent, type ExcalidrawImperativeAPI } from 'ngx-excalidraw';
+      import { ExcalidrawComponent, type ExcalidrawImperativeAPI } from '@getvoicify/ngx-excalidraw';
       import { appConfig } from './app.config';
       import { App } from '../app/app';
       const href = window.location.href;
     `));
+
+  test('rejects the unscoped package name, which does not resolve', () =>
+    rejects(`import { ExcalidrawComponent } from 'ngx-excalidraw';`));
 
   test('rejects Excalidraw and React imports', () => {
     rejects(`import type { AppState } from '@excalidraw/excalidraw/types';`);

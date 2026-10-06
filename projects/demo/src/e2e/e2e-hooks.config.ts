@@ -5,7 +5,7 @@ import {
   loadDefaultExcalidrawRenderer,
   type ExcalidrawImperativeAPI,
   type ExcalidrawRendererFactory,
-} from 'ngx-excalidraw';
+} from '@getvoicify/ngx-excalidraw';
 
 interface E2eHooks {
   __appFirstStableAt?: number;

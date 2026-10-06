@@ -9,12 +9,12 @@ Excalidraw's main menu.
 ## Install
 
 ```sh
-npm install ngx-excalidraw @excalidraw/excalidraw react react-dom
+npm install @getvoicify/ngx-excalidraw @excalidraw/excalidraw react react-dom
 ```
 
 ```ts
 import { Component } from '@angular/core';
-import { ExcalidrawComponent } from 'ngx-excalidraw';
+import { ExcalidrawComponent } from '@getvoicify/ngx-excalidraw';
 
 @Component({
   selector: 'app-board',
