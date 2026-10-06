@@ -42,6 +42,17 @@ describe('localStorageLibraryAdapter', () => {
     expect(await localStorageLibraryAdapter().load({ source: 'load' })).toBeNull();
   });
 
+  it.each([
+    ['not valid JSON', '{not json'],
+    ['not a library', JSON.stringify({ libraryItems: 'nope' })],
+  ])('refuses to save over a stored value that is %s', async (_, foreign) => {
+    localStorage.setItem('ngx-excalidraw-library', foreign);
+
+    await expect(localStorageLibraryAdapter().save({ libraryItems: items })).rejects.toThrow();
+
+    expect(localStorage.getItem('ngx-excalidraw-library')).toBe(foreign);
+  });
+
   it('loads nothing when the stored JSON is not a library', async () => {
     localStorage.setItem('ngx-excalidraw-library', JSON.stringify({ libraryItems: 'nope' }));
 
@@ -61,6 +72,7 @@ describe('localStorageLibraryAdapter', () => {
   it('rejects a save that storage refuses, so Excalidraw can report it', async () => {
     const quotaExceeded = new DOMException('full', 'QuotaExceededError');
     vi.stubGlobal('localStorage', {
+      getItem: () => null,
       setItem: () => {
         throw quotaExceeded;
       },
