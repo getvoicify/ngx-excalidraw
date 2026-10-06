@@ -39,6 +39,17 @@ Angular 22+ wrapper around `@excalidraw/excalidraw` (React). Package name: `ngx-
   - One React root per component; later input changes go through `render(props)` / `excalidrawAPI`
     — never remount.
   - `sceneChange` output is coalesced and skips emits when `getSceneVersion` is unchanged.
+- **Inputs**: reactive (pushed into the mounted editor) = `theme`, `viewModeEnabled`,
+  `zenModeEnabled`, `gridModeEnabled`, `langCode`, `UIOptions`. Mount-only (Excalidraw 0.18 reads
+  them only at mount; changing them later is ignored on purpose) = `initialData`,
+  `handleKeyboardGlobally` (toggling it later breaks Excalidraw's keyboard listeners),
+  `objectsSnapModeEnabled`, `name`, `autoFocus`, `detectScroll`. Unset inputs are never sent, so
+  Excalidraw defaults apply. `theme` going from `'dark'` to unset stays dark (Excalidraw only applies
+  a defined theme); pass `'light'` explicitly — the wrapper does not default it because a defined
+  theme hides Excalidraw's own theme toggle.
+- **Errors**: `editorError` output covers bundle load failures, renderer creation failures and
+  runtime crashes inside Excalidraw (caught by an error boundary in the bridge — React 19's
+  `root.render` never throws synchronously). The editor is torn down and the placeholder returns.
 - **Renderer seam**: the component never imports React. `EXCALIDRAW_RENDERER_LOADER` (default:
   dynamic `import()` of `react-bridge.ts`) yields `(host, callbacks) => { render(props); destroy() }`.
   The bridge is built from injectable React modules (`createRendererFactory`) so it is unit-tested
@@ -55,7 +66,7 @@ Angular 22+ wrapper around `@excalidraw/excalidraw` (React). Package name: `ngx-
   `localStorage` adapter provided), yielding persistence and the `#addLibrary` URL import.
   `libraryItems` input, `libraryChange` output.
 - **Utilities**: lazily exposed `exportToSvg` / `exportToBlob` / `serializeAsJSON`.
-- **Workspace resolution**: `ngx-excalidraw` maps to the library *source* in `tsconfig` paths; the
+- **Workspace resolution**: `ngx-excalidraw` maps to the library _source_ in `tsconfig` paths; the
   packaged artifact is verified by the install test.
 - **Tests (local, non-negotiable)**: Vitest (`@angular/build:unit-test`), Playwright e2e against the
   built SSR demo (never reusing an existing server), plus the pack-and-install script.
