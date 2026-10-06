@@ -1,6 +1,16 @@
 {
   "name": "ngx-excalidraw",
   "version": "0.0.1",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/getvoicify/ngx-excalidraw.git",
+    "directory": "projects/ngx-excalidraw"
+  },
+  "homepage": "https://github.com/getvoicify/ngx-excalidraw#readme",
+  "bugs": {
+    "url": "https://github.com/getvoicify/ngx-excalidraw/issues"
+  },
   "peerDependencies": {
     "@angular/common": ">=22.0.0 <23.0.0",
     "@angular/core": ">=22.0.0 <23.0.0",

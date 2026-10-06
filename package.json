@@ -16,6 +16,7 @@
     "test:install": "node scripts/install-test.mjs"
   },
   "private": true,
+  "license": "MIT",
   "packageManager": "npm@10.9.3",
   "dependencies": {
     "@angular/common": "^22.2.1",
