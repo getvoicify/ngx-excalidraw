@@ -1,4 +1,13 @@
-import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
+import {
+  ApplicationRef,
+  ChangeDetectionStrategy,
+  Component,
+  inject,
+  PLATFORM_ID,
+  signal,
+} from '@angular/core';
+import { filter, take } from 'rxjs';
 import type { ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types';
 import { ExcalidrawComponent } from 'ngx-excalidraw';
 
@@ -23,6 +32,16 @@ import { ExcalidrawComponent } from 'ngx-excalidraw';
 })
 export class App {
   protected readonly ready = signal(false);
+
+  constructor() {
+    if (!isPlatformBrowser(inject(PLATFORM_ID))) return;
+    inject(ApplicationRef)
+      .isStable.pipe(filter(Boolean), take(1))
+      .subscribe(() => {
+        (window as unknown as { __appFirstStableAt?: number }).__appFirstStableAt =
+          performance.now();
+      });
+  }
 
   protected onApi(api: ExcalidrawImperativeAPI): void {
     (window as unknown as { __excalidrawApi?: ExcalidrawImperativeAPI }).__excalidrawApi = api;

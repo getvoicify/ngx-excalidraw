@@ -55,3 +55,27 @@ test('mounts the real Excalidraw in the browser and lets the user draw a rectang
     .toEqual(['rectangle']);
   expect(errors).toEqual([]);
 });
+
+test('requests the Excalidraw bundle only after the app first becomes stable', async ({
+  page,
+  request,
+}) => {
+  await page.goto('/');
+  await expect(page.getByTestId('excalidraw-status')).toHaveText('Excalidraw ready');
+  const { stableAt, scripts } = await page.evaluate(() => ({
+    stableAt: (window as unknown as { __appFirstStableAt?: number }).__appFirstStableAt,
+    scripts: performance
+      .getEntriesByType('resource')
+      .filter((entry) => entry.name.endsWith('.js'))
+      .map((entry) => ({ url: entry.name, startTime: entry.startTime })),
+  }));
+  expect(stableAt).toEqual(expect.any(Number));
+
+  const excalidrawChunks = [];
+  for (const script of scripts) {
+    const source = await (await request.get(new URL(script.url).pathname)).text();
+    if (source.includes('excalidraw-container')) excalidrawChunks.push(script);
+  }
+  expect(excalidrawChunks.length).toBeGreaterThan(0);
+  for (const chunk of excalidrawChunks) expect(chunk.startTime).toBeGreaterThanOrEqual(stableAt!);
+});
