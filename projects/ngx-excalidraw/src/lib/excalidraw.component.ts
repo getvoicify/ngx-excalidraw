@@ -45,7 +45,26 @@ import { guardMainMenuActions } from './main-menu-guard';
 import { once } from './once';
 import { loadStylesheetOnce } from './stylesheet';
 
+interface CurrentScene {
+  elements: readonly NonDeletedExcalidrawElement[];
+  appState: AppState;
+  files: BinaryFiles;
+}
+
+export type SceneExportAppState = Partial<
+  Pick<
+    AppState,
+    | 'exportBackground'
+    | 'exportWithDarkMode'
+    | 'exportEmbedScene'
+    | 'exportScale'
+    | 'viewBackgroundColor'
+    | 'frameRendering'
+  >
+>;
+
 interface SceneExportOptions {
+  appState?: SceneExportAppState;
   exportPadding?: number;
   exportingFrame?: ExcalidrawFrameLikeElement | null;
 }
@@ -226,11 +245,11 @@ export class ExcalidrawComponent implements OnDestroy {
   }
 
   exportToSvg(options: SceneSvgExportOptions = {}): Promise<SVGSVGElement> {
-    return this.withCurrentScene((scene) => this.data.exportToSvg({ ...options, ...scene }));
+    return this.withCurrentScene((scene) => this.data.exportToSvg(withOverrides(scene, options)));
   }
 
   exportToBlob(options: SceneBlobExportOptions = {}): Promise<Blob> {
-    return this.withCurrentScene((scene) => this.data.exportToBlob({ ...options, ...scene }));
+    return this.withCurrentScene((scene) => this.data.exportToBlob(withOverrides(scene, options)));
   }
 
   serializeAsJSON(type: SceneJsonType = 'local'): Promise<string> {
@@ -243,13 +262,7 @@ export class ExcalidrawComponent implements OnDestroy {
     untracked(this.editor)?.destroy();
   }
 
-  private withCurrentScene<T>(
-    use: (scene: {
-      elements: readonly NonDeletedExcalidrawElement[];
-      appState: AppState;
-      files: BinaryFiles;
-    }) => Promise<T>,
-  ): Promise<T> {
+  private withCurrentScene<T>(use: (scene: CurrentScene) => Promise<T>): Promise<T> {
     const api = untracked(this.editorApi);
     if (!api) return noEditor();
     return use({
@@ -306,6 +319,10 @@ export class ExcalidrawComponent implements OnDestroy {
       }
     });
   }
+}
+
+function withOverrides<O extends SceneExportOptions>(scene: { appState: AppState }, options: O) {
+  return { ...options, ...scene, appState: { ...scene.appState, ...options.appState } };
 }
 
 function noEditor(): Promise<never> {

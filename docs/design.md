@@ -170,7 +170,10 @@ Angular 22+ wrapper around `@excalidraw/excalidraw` (React). Package name: `ngx-
   - `exportToSvg` / `exportToBlob` / `serializeAsJSON` on the component read the mounted editor's
     elements (`getSceneElements`, non-deleted; `serializeAsJSON` drops deleted ones itself in both
     `local` and `database` modes), appState and files and delegate to `ExcalidrawData`; they reject
-    while no editor is mounted. Their option types are hand-written from 0.18's
+    while no editor is mounted. An `appState` option is merged over the current appState for that
+    call only; it is limited to the keys 0.18's `exportToSvg` / `exportToBlob` read
+    (`exportBackground`, `exportWithDarkMode`, `exportEmbedScene`, `exportScale`,
+    `viewBackgroundColor`, `frameRendering`; `exportPadding` is its own option). Their option types are hand-written from 0.18's
     `utils/export.d.ts`, because 0.18 re-exports its export functions from `@excalidraw/utils/export`,
     which does not resolve for consumers, so `typeof import('@excalidraw/excalidraw').exportToSvg`
     is `any` (this also makes `ExcalidrawData`'s export signatures and `ExportToSvgOptions` /

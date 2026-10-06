@@ -236,8 +236,12 @@ state and act on its scene.
 | `serializeAsJSON(type?)` | `Promise<string>`                    | serializes the current scene, `'local'` (default) or `'database'`              |
 
 The actions read the elements, appState and files from the mounted editor and pass them to
-`ExcalidrawData`. Their options are Excalidraw 0.18's export options without `elements`,
-`appState` and `files` (`SceneSvgExportOptions`, `SceneBlobExportOptions`). They reject while no
+`ExcalidrawData`. Their options are Excalidraw 0.18's export options without `elements` and
+`files` (`SceneSvgExportOptions`, `SceneBlobExportOptions`). Their `appState`
+(`SceneExportAppState`) takes the keys Excalidraw's exports read: `exportBackground`,
+`exportWithDarkMode`, `exportEmbedScene`, `exportScale`, `viewBackgroundColor` and
+`frameRendering`. They are merged over the editor's current appState for that call only; the
+editor is not changed. For example, `exportToSvg({ appState: { exportWithDarkMode: true } })`. They reject while no
 editor is mounted (before it mounts, on the server, and after a failure or destroy); `ready()`
 tells you when they can run. `scene()` also returns to `undefined` when the editor is torn down.
 

@@ -16,19 +16,38 @@ describe('public API', () => {
     expectTypeOf<NgxExcalidraw.Theme>().toEqualTypeOf<ExcalidrawElementTypes.Theme>();
   });
 
-  it('types the scene action options as Excalidraw 0.18 export options minus the scene', () => {
+  it('types the scene action options as Excalidraw 0.18 export options with appState overrides', () => {
     expectTypeOf<NgxExcalidraw.SceneSvgExportOptions>().not.toBeAny();
     expectTypeOf<NgxExcalidraw.SceneBlobExportOptions>().not.toBeAny();
     expectTypeOf<keyof NgxExcalidraw.SceneSvgExportOptions>().toEqualTypeOf<
-      'exportPadding' | 'exportingFrame' | 'renderEmbeddables' | 'skipInliningFonts' | 'reuseImages'
+      | 'appState'
+      | 'exportPadding'
+      | 'exportingFrame'
+      | 'renderEmbeddables'
+      | 'skipInliningFonts'
+      | 'reuseImages'
     >();
     expectTypeOf<keyof NgxExcalidraw.SceneBlobExportOptions>().toEqualTypeOf<
+      | 'appState'
       | 'exportPadding'
       | 'exportingFrame'
       | 'maxWidthOrHeight'
       | 'getDimensions'
       | 'mimeType'
       | 'quality'
+    >();
+    expectTypeOf<NgxExcalidraw.SceneExportAppState>().toEqualTypeOf<
+      Partial<
+        Pick<
+          ExcalidrawTypes.AppState,
+          | 'exportBackground'
+          | 'exportWithDarkMode'
+          | 'exportEmbedScene'
+          | 'exportScale'
+          | 'viewBackgroundColor'
+          | 'frameRendering'
+        >
+      >
     >();
     expectTypeOf<NgxExcalidraw.SceneJsonType>().toEqualTypeOf<'local' | 'database'>();
   });

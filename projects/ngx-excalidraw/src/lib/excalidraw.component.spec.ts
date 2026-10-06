@@ -815,6 +815,32 @@ describe('ExcalidrawComponent', () => {
       ]);
     });
 
+    it("merges per-call appState overrides over the editor's current appState", async () => {
+      const editor = await mountWithEditor();
+
+      await editor.exportToSvg({ appState: { exportWithDarkMode: true } });
+      await editor.exportToBlob({ appState: { viewBackgroundColor: '#000000' } });
+
+      expect(excalidraw.exportToSvg.mock.lastCall![0].appState).toEqual({
+        ...appState,
+        exportWithDarkMode: true,
+      });
+      expect(excalidraw.exportToBlob.mock.lastCall![0].appState).toEqual({
+        ...appState,
+        viewBackgroundColor: '#000000',
+      });
+    });
+
+    it("leaves the editor's appState untouched by per-call overrides", async () => {
+      const editor = await mountWithEditor();
+      const before = { ...appState };
+
+      await editor.exportToSvg({ appState: { viewBackgroundColor: '#000000' } });
+
+      expect(appState).toEqual(before);
+      expect(excalidraw.exportToSvg.mock.lastCall![0].appState).not.toBe(appState);
+    });
+
     it('rejects every action while no editor is mounted', async () => {
       const editor = (await mount()).componentInstance;
 

@@ -1,6 +1,7 @@
 export {
   ExcalidrawComponent,
   type SceneBlobExportOptions,
+  type SceneExportAppState,
   type SceneJsonType,
   type SceneSvgExportOptions,
 } from './lib/excalidraw.component';
