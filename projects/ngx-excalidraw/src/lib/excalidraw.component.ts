@@ -86,6 +86,9 @@ export class ExcalidrawComponent implements OnDestroy {
   readonly sceneChange = output<ExcalidrawSceneChange>();
   readonly libraryChange = output<LibraryItems>();
 
+  private readonly latestScene = signal<ExcalidrawSceneChange | undefined>(undefined);
+  readonly scene = this.latestScene.asReadonly();
+
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
   private readonly dom = inject(Renderer2);
   private readonly zone = inject(NgZone);
@@ -223,7 +226,11 @@ export class ExcalidrawComponent implements OnDestroy {
               }),
             onError: (error) => this.zone.run(() => this.mountFailure.set({ error })),
             onSceneChange: (change) => {
-              if (this.editor()) this.zone.run(() => this.sceneChange.emit(change));
+              if (!this.editor()) return;
+              this.zone.run(() => {
+                this.latestScene.set(change);
+                this.sceneChange.emit(change);
+              });
             },
             onLibraryChange: (libraryItems) => {
               if (this.editor()) this.zone.run(() => this.libraryChange.emit(libraryItems));

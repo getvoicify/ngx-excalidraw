@@ -329,6 +329,39 @@ describe('ExcalidrawComponent', () => {
     expect(emitted).toEqual([change]);
   });
 
+  it('holds no scene until the renderer reports the first one', async () => {
+    configure();
+    const fixture = await mount();
+
+    expect(fixture.componentInstance.scene()).toBeUndefined();
+  });
+
+  it('holds the latest scene change the renderer reported in its scene signal', async () => {
+    configure();
+    const fixture = await mount();
+    const first = { version: 1 } as unknown as ExcalidrawSceneChange;
+    const latest = { version: 2 } as unknown as ExcalidrawSceneChange;
+
+    fake.created[0].callbacks.onSceneChange(first);
+    fake.created[0].callbacks.onSceneChange(latest);
+
+    expect(fixture.componentInstance.scene()).toBe(latest);
+  });
+
+  it('keeps the scene from before the component was destroyed', async () => {
+    configure();
+    const fixture = await mount();
+    const before = { version: 1 } as unknown as ExcalidrawSceneChange;
+    fake.created[0].callbacks.onSceneChange(before);
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    onTestFinished(() => warn.mockRestore());
+    fixture.destroy();
+
+    fake.created[0].callbacks.onSceneChange({ version: 2 } as unknown as ExcalidrawSceneChange);
+
+    expect(fixture.componentInstance.scene()).toBe(before);
+  });
+
   it('delivers the last scene change the renderer flushes while being destroyed', async () => {
     configure();
     const fixture = TestBed.createComponent(SceneChangeHost);
