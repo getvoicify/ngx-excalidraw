@@ -122,6 +122,27 @@ describe('React bridge', () => {
     }
   });
 
+  it('lets a memoized Excalidraw skip re-renders whose props are unchanged in value', async () => {
+    let renders = 0;
+    const Excalidraw = react.memo(({ children }: ExcalidrawProps) => {
+      renders++;
+      return react.createElement('div', { className: 'excalidraw' }, children);
+    });
+    const renderer = createRendererFactory({ react, reactDomClient, Excalidraw })(host, {
+      onApi: vi.fn(),
+      onError: vi.fn(),
+    });
+    await act(async () => renderer.render({ theme: 'light' }));
+    const rendersAfterMount = renders;
+
+    await act(async () => renderer.render({ theme: 'light' }));
+    expect(renders).toBe(rendersAfterMount);
+
+    await act(async () => renderer.render({ theme: 'dark' }));
+    expect(renders).toBe(rendersAfterMount + 1);
+    await act(async () => renderer.destroy());
+  });
+
   it('unmounts Excalidraw from the host on destroy', async () => {
     const { Excalidraw } = excalidrawHandingOverDuringRender(vi.fn());
     const renderer = createRendererFactory({ react, reactDomClient, Excalidraw })(host, {

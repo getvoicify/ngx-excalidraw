@@ -4,7 +4,10 @@ import { once } from './once';
 import type { ExcalidrawRendererFactory, ExcalidrawRenderProps } from './renderer';
 
 export interface ReactBridgeModules {
-  react: Pick<typeof import('react'), 'Component' | 'createElement' | 'useEffect' | 'useRef'>;
+  react: Pick<
+    typeof import('react'),
+    'Component' | 'createElement' | 'useCallback' | 'useEffect' | 'useMemo' | 'useRef'
+  >;
   reactDomClient: Pick<typeof import('react-dom/client'), 'createRoot'>;
   Excalidraw: ComponentType<ExcalidrawProps>;
 }
@@ -51,11 +54,14 @@ export function createRendererFactory({
 
   const ExcalidrawHost = ({ props, onApi }: { props: ExcalidrawRenderProps; onApi: HandOver }) => {
     const api = react.useRef<ExcalidrawImperativeAPI | null>(null);
-    return react.createElement(
-      Excalidraw,
-      { ...props, excalidrawAPI: (handedOver) => (api.current = handedOver) },
-      react.createElement(HandOverOnceEditorCommits, { api, onApi }),
+    const excalidrawAPI = react.useCallback((handedOver: ExcalidrawImperativeAPI) => {
+      api.current = handedOver;
+    }, []);
+    const probe = react.useMemo(
+      () => react.createElement(HandOverOnceEditorCommits, { api, onApi }),
+      [onApi],
     );
+    return react.createElement(Excalidraw, { ...props, excalidrawAPI }, probe);
   };
 
   return (host, callbacks) => {
