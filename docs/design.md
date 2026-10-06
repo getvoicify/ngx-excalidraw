@@ -53,7 +53,7 @@ Angular 22+ wrapper around `@excalidraw/excalidraw` (React). Package name: `ngx-
     treat them as read-only and serialize (e.g. `serializeAsJSON`) to persist; deep-cloning per
     frame was rejected for large-scene cost.
 - **Inputs**: reactive (pushed into the mounted editor) = `theme`, `viewModeEnabled`,
-  `zenModeEnabled`, `gridModeEnabled`, `langCode`, `UIOptions`. Mount-only (Excalidraw 0.18 reads
+  `zenModeEnabled`, `gridModeEnabled`, `langCode`, `UIOptions`, `libraryReturnUrl`. Mount-only (Excalidraw 0.18 reads
   them only at mount; changing them later is ignored on purpose) = `initialData`,
   `handleKeyboardGlobally` (toggling it later breaks Excalidraw's keyboard listeners),
   `objectsSnapModeEnabled`, `name`, `autoFocus`, `detectScroll`. Unset inputs are never sent, so
@@ -74,10 +74,19 @@ Angular 22+ wrapper around `@excalidraw/excalidraw` (React). Package name: `ngx-
   the consumer includes the CSS globally.
 - **Assets**: `provideExcalidraw({ assetPath })` sets `window.EXCALIDRAW_ASSET_PATH` before import
   (self-hosted fonts); unset = Excalidraw's CDN default.
-- **Libraries** (`.excalidrawlib` item collections): the bridge runs Excalidraw's own
-  `useHandleLibrary` hook with an adapter bridged from Angular (`EXCALIDRAW_LIBRARY_ADAPTER`,
-  `localStorage` adapter provided), yielding persistence and the `#addLibrary` URL import.
-  `libraryItems` input, `libraryChange` output.
+- **Libraries** (`.excalidrawlib` item collections): opt-in through
+  `provideExcalidrawLibrary({ adapter?, validateLibraryUrl? })`, separate from `provideExcalidraw`
+  because Excalidraw's `useHandleLibrary` reads the URL and installs a global `hashchange` listener —
+  apps that never asked for libraries must not get that. The bridge runs the hook beside the editor
+  with the API as React state set by the probe (the hook's effect depends only on the API value).
+  Without `validateLibraryUrl` only libraries.excalidraw.com is allowed. An `#addLibrary=<url>`
+  import asks `window.confirm` unless its `token` equals the editor's `id`, then Excalidraw strips
+  `addLibrary` from the hash. `localStorageLibraryAdapter(key)` touches storage only inside
+  `load`/`save`; `load` yields nothing on missing, corrupt or unreadable data, while `save` rejects
+  on failure as Excalidraw's adapter contract requires, so Excalidraw reports it. `libraryChange`
+  emits every library update (including the adapter's initial load). `libraryReturnUrl` is
+  reactive. Seed items with `initialData.libraryItems` (mount-only, merged) or
+  `api.updateLibrary(...)`; there is no `libraryItems` input.
 - **Utilities**: lazily exposed `exportToSvg` / `exportToBlob` / `serializeAsJSON`.
 - **Workspace resolution**: `ngx-excalidraw` maps to the library _source_ in `tsconfig` paths; the
   packaged artifact is verified by the install test.
@@ -91,7 +100,7 @@ Angular 22+ wrapper around `@excalidraw/excalidraw` (React). Package name: `ngx-
 3. `feat/lazy-mount` — done.
 4. `feat/inputs` — theme/viewMode/zenMode/gridMode/langCode/initialData etc. pushed without remount.
 5. `feat/scene-change` — coalesced `sceneChange` output.
-6. `feat/libraries` — `libraryItems` / `libraryChange`, adapter token + localStorage adapter,
+6. `feat/libraries` — `libraryChange` / `libraryReturnUrl`, `provideExcalidrawLibrary` + localStorage adapter,
    `useHandleLibrary` wiring, `#addLibrary` flow + e2e.
 7. `feat/export` — export helpers.
 8. `test/install` — pack + fresh-app install script, chunk-split assertion on the packaged output.
