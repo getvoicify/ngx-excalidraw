@@ -57,6 +57,65 @@ test('restores the imported library from localStorage after a reload', async ({
   expect(dialogs).toEqual(['confirm']);
 });
 
+const officialLibraryUrl = 'https://libraries.excalidraw.com/libraries/e2e/sample.excalidrawlib';
+
+async function serveOfficialLegacyLibrary(page: Page) {
+  await page.route(officialLibraryUrl, (route) =>
+    route.fulfill({
+      path: 'e2e/fixtures/legacy-v1.excalidrawlib',
+      contentType: 'application/json',
+      headers: { 'access-control-allow-origin': '*' },
+    }),
+  );
+}
+
+test('imports a legacy v1 library from the official libraries site via Add to Excalidraw', async ({
+  page,
+}) => {
+  await serveOfficialLegacyLibrary(page);
+  const dialogs = recordDialogs(page, (dialog) => dialog.accept());
+
+  await page.goto(addLibraryHash(officialLibraryUrl));
+
+  const disallowed = page.getByText(/Invalid or disallowed library URL/);
+  await expect(page.getByText('library: 3', { exact: true }).or(disallowed)).toBeVisible();
+  await expect(disallowed).toHaveCount(0);
+  await expect(page.getByTestId('library-items')).toHaveText('library: 3');
+  expect(dialogs).toEqual(['confirm']);
+});
+
+test('restores a library imported from the official site after a reload', async ({ page }) => {
+  await serveOfficialLegacyLibrary(page);
+  recordDialogs(page, (dialog) => dialog.accept());
+  await page.goto(addLibraryHash(officialLibraryUrl));
+  await expect(page.getByTestId('library-items')).toHaveText('library: 3');
+  await expect.poll(() => storedLibraryItemCount(page)).toBe(3);
+
+  await page.reload();
+
+  await expect(page.getByTestId('excalidraw-status')).toHaveText('Excalidraw ready');
+  await expect(page.getByTestId('library-items')).toHaveText('library: 3');
+});
+
+test('refuses a library from a host that only looks like the official libraries site', async ({
+  page,
+}) => {
+  const lookalike = 'https://libraries.excalidraw.com.evil.com/libraries/e2e/sample.excalidrawlib';
+  await page.route(lookalike, (route) =>
+    route.fulfill({
+      path: 'e2e/fixtures/legacy-v1.excalidrawlib',
+      contentType: 'application/json',
+    }),
+  );
+  const dialogs = recordDialogs(page, (dialog) => dialog.accept());
+
+  await page.goto(addLibraryHash(lookalike));
+
+  await expect(page.getByText(/Invalid or disallowed library URL/)).toBeVisible();
+  await expect(page.getByTestId('library-items')).toHaveText('library: 0');
+  expect(dialogs).toEqual([]);
+});
+
 test('refuses to import a library from an origin the validator does not allow', async ({
   page,
   baseURL,

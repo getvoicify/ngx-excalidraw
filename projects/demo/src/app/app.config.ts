@@ -5,6 +5,7 @@ import {
   withNoIncrementalHydration,
 } from '@angular/platform-browser';
 import {
+  libraryUrlValidator,
   localStorageLibraryAdapter,
   provideExcalidraw,
   provideExcalidrawLibrary,
@@ -17,7 +18,7 @@ export const appConfig: ApplicationConfig = {
     provideExcalidraw({ styleUrl: 'excalidraw.css' }),
     provideExcalidrawLibrary({
       adapter: localStorageLibraryAdapter(),
-      validateLibraryUrl: (libraryUrl) => new URL(libraryUrl).origin === window.location.origin,
+      validateLibraryUrl: libraryUrlValidator(),
     }),
   ],
 };

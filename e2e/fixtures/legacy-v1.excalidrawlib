@@ -1,0 +1,101 @@
+{
+  "type": "excalidrawlib",
+  "version": 1,
+  "source": "https://excalidraw.com",
+  "library": [
+    [
+      {
+        "id": "v1-server",
+        "type": "rectangle",
+        "x": 0,
+        "y": 0,
+        "width": 80,
+        "height": 50,
+        "angle": 0,
+        "strokeColor": "#1e1e1e",
+        "backgroundColor": "transparent",
+        "fillStyle": "hachure",
+        "strokeWidth": 1,
+        "strokeStyle": "solid",
+        "roughness": 1,
+        "opacity": 100,
+        "groupIds": [],
+        "seed": 1,
+        "version": 1,
+        "versionNonce": 1,
+        "isDeleted": false,
+        "boundElementIds": null
+      }
+    ],
+    [
+      {
+        "id": "v1-db",
+        "type": "ellipse",
+        "x": 0,
+        "y": 0,
+        "width": 80,
+        "height": 50,
+        "angle": 0,
+        "strokeColor": "#1e1e1e",
+        "backgroundColor": "transparent",
+        "fillStyle": "hachure",
+        "strokeWidth": 1,
+        "strokeStyle": "solid",
+        "roughness": 1,
+        "opacity": 100,
+        "groupIds": [],
+        "seed": 1,
+        "version": 1,
+        "versionNonce": 1,
+        "isDeleted": false,
+        "boundElementIds": null
+      }
+    ],
+    [
+      {
+        "id": "v1-queue",
+        "type": "diamond",
+        "x": 0,
+        "y": 0,
+        "width": 80,
+        "height": 50,
+        "angle": 0,
+        "strokeColor": "#1e1e1e",
+        "backgroundColor": "transparent",
+        "fillStyle": "hachure",
+        "strokeWidth": 1,
+        "strokeStyle": "solid",
+        "roughness": 1,
+        "opacity": 100,
+        "groupIds": [],
+        "seed": 1,
+        "version": 1,
+        "versionNonce": 1,
+        "isDeleted": false,
+        "boundElementIds": null
+      },
+      {
+        "id": "v1-queue-label",
+        "type": "rectangle",
+        "x": 100,
+        "y": 0,
+        "width": 80,
+        "height": 50,
+        "angle": 0,
+        "strokeColor": "#1e1e1e",
+        "backgroundColor": "transparent",
+        "fillStyle": "hachure",
+        "strokeWidth": 1,
+        "strokeStyle": "solid",
+        "roughness": 1,
+        "opacity": 100,
+        "groupIds": [],
+        "seed": 1,
+        "version": 1,
+        "versionNonce": 1,
+        "isDeleted": false,
+        "boundElementIds": null
+      }
+    ]
+  ]
+}
