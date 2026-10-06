@@ -147,6 +147,7 @@ The types are Excalidraw 0.18's `ExcalidrawProps`. Boolean inputs also accept at
 | `langCode`               | yes                        |
 | `UIOptions`              | yes                        |
 | `libraryReturnUrl`       | yes                        |
+| `mainMenu`               | yes                        |
 | `initialData`            | no, read once at mount     |
 | `handleKeyboardGlobally` | no, read once at mount     |
 | `objectsSnapModeEnabled` | no, read once at mount     |
@@ -156,6 +157,23 @@ The types are Excalidraw 0.18's `ExcalidrawProps`. Boolean inputs also accept at
 
 Excalidraw 0.18 reads the mount-only inputs only when it mounts, so later changes to them are
 ignored. Reactive inputs update the editor in place, without remounting it.
+
+### Hiding the main menu
+
+`mainMenu` (default `true`) shows or hides Excalidraw's main (hamburger) menu. Excalidraw 0.18 has
+no prop for this: `UIOptions.canvasActions` only removes some of the menu's items. Bind it to a
+signal to switch the menu at runtime. The editor is not remounted and the scene is kept.
+
+```html
+<ngx-excalidraw [mainMenu]="showMenu()" />
+```
+
+While it is `false`, the host carries the `ngx-excalidraw--no-main-menu` class, which hides the
+menu trigger on both the desktop and the phone layout. The class is in the server-rendered HTML,
+so the trigger never appears before hydration. If the menu is open when it gets hidden, it is
+closed. Excalidraw has no keyboard shortcut that opens it. Its command palette can open it, but the
+wrapper does not render the palette. Opening it yourself with
+`api.updateScene({ appState: { openMenu: 'canvas' } })` still works.
 
 ### Outputs
 
