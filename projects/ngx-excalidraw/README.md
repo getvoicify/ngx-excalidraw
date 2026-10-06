@@ -53,6 +53,41 @@ and pass `provideExcalidraw({ styleUrl: 'excalidraw.css', assetPath: '/' })`.
 Put `provideExcalidraw` in the application config. When it is provided on a lazy route, it reaches
 only the editors under that route, and `ExcalidrawData` still sees only the root config.
 
+### Expected warnings
+
+With React 19, `npm install` prints `ERESOLVE overriding peer dependency` warnings. They come from
+Radix packages nested inside `@excalidraw/excalidraw` 0.18, which declare
+`react ^16.8 || ^17.0 || ^18.0`. They are harmless, and the install needs neither `--force` nor
+`--legacy-peer-deps`.
+
+`ng build` warns that React and several of Excalidraw's dependencies are not ESM (CommonJS). They
+all end up in the lazy Excalidraw chunk, not the initial bundle. To silence the warnings, add this
+list to `projects.<app>.architect.build.options` in `angular.json`:
+
+```json
+"allowedCommonJsDependencies": [
+  "@braintree/sanitize-url",
+  "@excalidraw/markdown-to-text",
+  "canvas-roundrect-polyfill",
+  "cytoscape-cose-bilkent",
+  "cytoscape-fcose",
+  "dayjs",
+  "es6-promise-pool",
+  "fastdom",
+  "fuzzy",
+  "lodash.debounce",
+  "lodash.throttle",
+  "pica",
+  "png-chunk-text",
+  "png-chunks-encode",
+  "png-chunks-extract",
+  "react",
+  "react-dom",
+  "scheduler",
+  "use-sync-external-store"
+]
+```
+
 ## Usage
 
 The editor fills its host, so give the host a height. Anything marked `placeholder` is shown until
