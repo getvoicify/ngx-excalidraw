@@ -60,7 +60,7 @@ export function coalesceSceneChanges({
     ]);
     if (signature === emittedSignature) return;
     emittedSignature = signature;
-    emit({ elements, appState, files, version });
+    emit({ elements: [...elements], appState, files, version });
   };
 
   return {

@@ -121,6 +121,22 @@ describe('coalesceSceneChanges', () => {
     expect(emit).toHaveBeenCalledTimes(1);
   });
 
+  it('emits a fresh elements array each time even when Excalidraw reuses its live array', () => {
+    const { scene, emit, runFrame } = setUp();
+    const live = [element('a', 1)];
+    scene.onChange(live, appState(0), noFiles);
+    runFrame();
+
+    live[0] = element('a', 2);
+    scene.onChange(live, appState(0), noFiles);
+    runFrame();
+
+    const [[first], [second]] = emit.mock.calls;
+    expect(first.elements).not.toBe(second.elements);
+    expect(first.elements).not.toBe(live);
+    expect(second.elements).toEqual(live);
+  });
+
   it('emits the first scene it sees', () => {
     const { scene, emit, runFrame } = setUp();
 
