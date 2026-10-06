@@ -408,3 +408,9 @@ export class WhiteboardFiles {
   because a defined theme hides Excalidraw's own theme toggle.
 - **Asset path.** `window.EXCALIDRAW_ASSET_PATH` is a single page-wide global, so the last
   `assetPath` written wins.
+
+## License
+
+MIT. Source, issues and the full license live in the
+[GitHub repository](https://github.com/getvoicify/ngx-excalidraw). Excalidraw is MIT-licensed by
+its authors.
