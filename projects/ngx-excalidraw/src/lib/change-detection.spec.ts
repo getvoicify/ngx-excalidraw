@@ -139,6 +139,28 @@ describe('ExcalidrawComponent change detection', () => {
     expect(zoneInsideAtEmit).toBe(true);
   });
 
+  it('emits library changes inside the Angular zone', async () => {
+    const zone = new RecordingZone();
+    const { handed, factory } = rendererHandingOverApi();
+    TestBed.configureTestingModule({
+      providers: [
+        provideZonelessChangeDetection(),
+        { provide: NgZone, useValue: zone },
+        { provide: EXCALIDRAW_RENDERER_LOADER, useValue: () => Promise.resolve(factory(zone)) },
+      ],
+    });
+    const fixture = TestBed.createComponent(ExcalidrawComponent);
+    let zoneInsideAtEmit: boolean | undefined;
+    fixture.componentInstance.libraryChange.subscribe(() => (zoneInsideAtEmit = zone.inside));
+    await fixture.whenStable();
+    await flush();
+    await fixture.whenStable();
+
+    zone.runOutsideAngular(() => handed.callbacks!.onLibraryChange([]));
+
+    expect(zoneInsideAtEmit).toBe(true);
+  });
+
   it('pushes input changes into React outside the Angular zone', async () => {
     const zone = new RecordingZone();
     const { handed, factory } = rendererHandingOverApi();

@@ -6,6 +6,7 @@ import type {
   BinaryFiles,
   ExcalidrawImperativeAPI,
   ExcalidrawProps,
+  LibraryItems,
 } from '@excalidraw/excalidraw/types';
 import {
   commonJsExports,
@@ -22,9 +23,16 @@ describe('React bridge', () => {
   let hashElementsVersion: ReturnType<typeof vi.fn>;
   let hidePage: () => void;
 
-  function createRendererFactory(modules: Omit<ReactBridgeModules, 'hashElementsVersion'>) {
+  function createRendererFactory(
+    modules: Omit<ReactBridgeModules, 'hashElementsVersion' | 'useHandleLibrary'> &
+      Partial<Pick<ReactBridgeModules, 'useHandleLibrary'>>,
+  ) {
     return createBridge(
-      { ...modules, hashElementsVersion: hashElementsVersion as never },
+      {
+        useHandleLibrary: () => undefined,
+        ...modules,
+        hashElementsVersion: hashElementsVersion as never,
+      },
       {
         frames: frames.scheduler,
         pageHidden: {
@@ -38,7 +46,7 @@ describe('React bridge', () => {
   }
 
   function noSceneChanges() {
-    return { onSceneChange: vi.fn() };
+    return { onSceneChange: vi.fn(), onLibraryChange: vi.fn() };
   }
 
   beforeEach(() => {
@@ -231,6 +239,7 @@ describe('React bridge', () => {
       onApi: vi.fn(),
       onError: vi.fn(),
       onSceneChange,
+      onLibraryChange: vi.fn(),
     });
     await act(async () => renderer.render({}));
     const latest = [{ id: 'b' }] as unknown as ExcalidrawElement[];
@@ -254,6 +263,7 @@ describe('React bridge', () => {
       onApi: vi.fn(),
       onError: vi.fn(),
       onSceneChange,
+      onLibraryChange: vi.fn(),
     });
     await act(async () => renderer.render({}));
 
@@ -271,6 +281,7 @@ describe('React bridge', () => {
       onApi: vi.fn(),
       onError: vi.fn(),
       onSceneChange,
+      onLibraryChange: vi.fn(),
     });
     await act(async () => renderer.render({}));
 
@@ -280,6 +291,77 @@ describe('React bridge', () => {
     frames.run();
 
     expect(onSceneChange).toHaveBeenCalledTimes(1);
+  });
+
+  function libraryHandlingRecorder() {
+    const handled: Parameters<ReactBridgeModules['useHandleLibrary']>[0][] = [];
+    const useHandleLibrary: ReactBridgeModules['useHandleLibrary'] = (opts) => {
+      react.useEffect(() => {
+        if (opts.excalidrawAPI) handled.push(opts);
+      }, [opts.excalidrawAPI]);
+    };
+    return { handled, useHandleLibrary };
+  }
+
+  it("runs Excalidraw's library handling with the committed editor API and the configured adapter and validator", async () => {
+    const { api, Excalidraw, finishLoading } = excalidrawConstructingItsEditorAfterLoading();
+    const { handled, useHandleLibrary } = libraryHandlingRecorder();
+    const adapter = { load: () => null, save: () => undefined };
+    const validateLibraryUrl = (url: string) => url.startsWith('https://allowed.test/');
+    const renderer = createRendererFactory({ react, reactDomClient, Excalidraw, useHandleLibrary })(
+      host,
+      {
+        onApi: vi.fn(),
+        onError: vi.fn(),
+        ...noSceneChanges(),
+        library: { adapter, validateLibraryUrl },
+      },
+    );
+
+    await act(async () => renderer.render({}));
+    expect(handled).toEqual([]);
+    await act(async () => finishLoading());
+
+    expect(handled).toEqual([{ excalidrawAPI: api, adapter, validateLibraryUrl }]);
+    await act(async () => renderer.destroy());
+  });
+
+  it('leaves library handling off when no library is configured', async () => {
+    const { Excalidraw } = excalidrawHandingOverDuringRender(vi.fn());
+    const useHandleLibrary = vi.fn();
+    const renderer = createRendererFactory({ react, reactDomClient, Excalidraw, useHandleLibrary })(
+      host,
+      { onApi: vi.fn(), onError: vi.fn(), ...noSceneChanges() },
+    );
+
+    await act(async () => renderer.render({}));
+
+    expect(useHandleLibrary).not.toHaveBeenCalled();
+    await act(async () => renderer.destroy());
+  });
+
+  it('reports library changes through one onLibraryChange that stays the same across re-renders', async () => {
+    const seen: NonNullable<ExcalidrawProps['onLibraryChange']>[] = [];
+    const Excalidraw = ({ onLibraryChange, children }: ExcalidrawProps) => {
+      if (onLibraryChange) seen.push(onLibraryChange);
+      return react.createElement('div', { className: 'excalidraw' }, children);
+    };
+    const onLibraryChange = vi.fn();
+    const renderer = createRendererFactory({ react, reactDomClient, Excalidraw })(host, {
+      onApi: vi.fn(),
+      onError: vi.fn(),
+      onSceneChange: vi.fn(),
+      onLibraryChange,
+    });
+    await act(async () => renderer.render({ theme: 'light' }));
+    await act(async () => renderer.render({ theme: 'dark' }));
+    const items = [{ id: 'box' }] as unknown as LibraryItems;
+
+    seen.at(-1)!(items);
+
+    expect(new Set(seen).size).toBe(1);
+    expect(onLibraryChange.mock.calls).toEqual([[items]]);
+    await act(async () => renderer.destroy());
   });
 
   it('unmounts Excalidraw from the host on destroy', async () => {

@@ -14,5 +14,10 @@ export type {
   ExcalidrawRenderProps,
 } from './lib/renderer';
 export type { ExcalidrawSceneChange } from './lib/scene-change';
-export type { ExcalidrawLibraryAdapter } from './lib/library';
+export {
+  EXCALIDRAW_LIBRARY,
+  provideExcalidrawLibrary,
+  type ExcalidrawLibraryAdapter,
+  type ExcalidrawLibraryOptions,
+} from './lib/library';
 export { localStorageLibraryAdapter } from './lib/local-storage-library-adapter';

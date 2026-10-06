@@ -18,8 +18,13 @@ import {
   untracked,
 } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-import type { ExcalidrawImperativeAPI, ExcalidrawProps } from '@excalidraw/excalidraw/types';
+import type {
+  ExcalidrawImperativeAPI,
+  ExcalidrawProps,
+  LibraryItems,
+} from '@excalidraw/excalidraw/types';
 import { APP_FIRST_SETTLED } from './app-settled';
+import { EXCALIDRAW_LIBRARY } from './library';
 import { EXCALIDRAW_CONFIG } from './provide-excalidraw';
 import type {
   ExcalidrawRenderer,
@@ -69,12 +74,14 @@ export class ExcalidrawComponent implements OnDestroy {
   readonly api = output<ExcalidrawImperativeAPI>();
   readonly editorError = output<unknown>();
   readonly sceneChange = output<ExcalidrawSceneChange>();
+  readonly libraryChange = output<LibraryItems>();
 
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
   private readonly dom = inject(Renderer2);
   private readonly zone = inject(NgZone);
   private readonly document = inject(DOCUMENT);
   private readonly config = inject(EXCALIDRAW_CONFIG);
+  private readonly library = inject(EXCALIDRAW_LIBRARY);
   private readonly loadRenderer = inject(EXCALIDRAW_RENDERER_LOADER);
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
   private readonly appSettled = inject(APP_FIRST_SETTLED);
@@ -178,6 +185,10 @@ export class ExcalidrawComponent implements OnDestroy {
             onSceneChange: (change) => {
               if (this.editor()) this.zone.run(() => this.sceneChange.emit(change));
             },
+            onLibraryChange: (libraryItems) => {
+              if (this.editor()) this.zone.run(() => this.libraryChange.emit(libraryItems));
+            },
+            library: this.library,
           }),
         };
       } catch (error) {

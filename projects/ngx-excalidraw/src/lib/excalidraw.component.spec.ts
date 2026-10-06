@@ -11,8 +11,10 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import type {
   ExcalidrawImperativeAPI,
   ExcalidrawInitialDataState,
+  LibraryItems,
 } from '@excalidraw/excalidraw/types';
 import { ExcalidrawComponent } from './excalidraw.component';
+import { provideExcalidrawLibrary } from './library';
 import { provideExcalidraw } from './provide-excalidraw';
 import { EXCALIDRAW_RENDERER_LOADER } from './renderer-loader';
 import type {
@@ -308,6 +310,49 @@ describe('ExcalidrawComponent', () => {
 
     expect(emitted).toEqual([]);
     expect(warn.mock.calls.map(String).filter(isDestroyedOutputWarning)).toEqual([]);
+  });
+
+  it('emits the library items the renderer reports through libraryChange', async () => {
+    configure();
+    const fixture = await mount();
+    const emitted: LibraryItems[] = [];
+    fixture.componentInstance.libraryChange.subscribe((items) => emitted.push(items));
+    const items = [{ id: 'box' }] as unknown as LibraryItems;
+
+    fake.created[0].callbacks.onLibraryChange(items);
+
+    expect(emitted).toEqual([items]);
+  });
+
+  it('emits no library change the renderer reports after the component is destroyed', async () => {
+    configure();
+    const fixture = await mount();
+    const emitted: LibraryItems[] = [];
+    fixture.componentInstance.libraryChange.subscribe((items) => emitted.push(items));
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    onTestFinished(() => warn.mockRestore());
+    fixture.destroy();
+
+    fake.created[0].callbacks.onLibraryChange([]);
+
+    expect(emitted).toEqual([]);
+    expect(warn.mock.calls.map(String).filter(isDestroyedOutputWarning)).toEqual([]);
+  });
+
+  it('hands the provided library adapter and URL validator to the renderer', async () => {
+    const adapter = { load: () => null, save: () => undefined };
+    const validateLibraryUrl = () => true;
+    configure([provideExcalidrawLibrary({ adapter, validateLibraryUrl })]);
+
+    await mount();
+
+    expect(fake.created[0].callbacks.library).toEqual({ adapter, validateLibraryUrl });
+  });
+
+  it('leaves library handling off unless a library is provided', async () => {
+    configure();
+    await mount();
+    expect(fake.created[0].callbacks.library).toBeUndefined();
   });
 
   it('never creates the renderer when destroyed before the bundle finishes loading', async () => {
