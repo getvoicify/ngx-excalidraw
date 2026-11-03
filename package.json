@@ -33,7 +33,7 @@
   },
   "devDependencies": {
     "@angular/build": "^22.2.1",
-    "@angular/cli": "^22.2.1",
+    "@angular/cli": "^22.2.3",
     "@angular/compiler-cli": "^22.2.1",
     "@excalidraw/excalidraw": "0.18.1",
     "@playwright/test": "^1.56.0",
